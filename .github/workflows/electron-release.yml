@@ -50,6 +50,7 @@ jobs:
           pnpm --filter @soundx/ws run build
           pnpm --filter @soundx/utils run build
           pnpm --filter @soundx/db run generate
+          pnpm --filter @soundx/services run build
 
       - name: Build Electron App
         env:

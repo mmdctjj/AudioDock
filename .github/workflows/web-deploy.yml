@@ -42,6 +42,7 @@ jobs:
           pnpm --filter @soundx/ws run build
           pnpm --filter @soundx/utils run build
           pnpm --filter @soundx/db run generate
+          pnpm --filter @soundx/services run build
 
       - name: Build Web
         # The script `pnpm run build:web` runs `cross-env VITE_PLATFORM=web tsc -b && vite build` in apps/desktop
