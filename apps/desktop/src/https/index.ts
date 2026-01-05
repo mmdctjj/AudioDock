@@ -62,6 +62,9 @@ instance.interceptors.response.use(
     // 处理 HTTP 网络错误
     // HTTP 状态码
     const status = error.response?.status ?? 0;
+    if (status === 401) {
+      localStorage.removeItem("auth-storage");
+    }
     // message.error(messageContent[status]);
     // Note: message.error cannot be used here as it's outside React context
     // Error handling should be done in components using try-catch
