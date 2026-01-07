@@ -76,6 +76,8 @@ COPY --from=builder /app/packages/services/dist    ./packages/services/dist
 COPY --from=builder /app/services/api/dist      ./services/api/dist
 COPY --from=builder /app/apps/desktop/dist      ./apps/desktop/dist
 
+RUN cd packages/db && npx prisma generate
+
 EXPOSE 3000
 
 CMD ["sh", "-c", "cd packages/db && npx prisma db push && cd ../../services/api && node dist/main.js"]

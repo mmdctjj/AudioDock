@@ -118,6 +118,23 @@ export class ImportService {
       task.total = musicResults.length + audiobookResults.length;
       task.current = 0;
 
+      // Cache for folder IDs to reduce DB queries
+      const folderCache = new Map<string, number>();
+
+      const getFolderId = async (localPath: string, basePath: string, type: TrackType): Promise<number | null> => {
+        const dirPath = path.dirname(localPath);
+        const cacheKey = `${dirPath}`;
+        
+        if (folderCache.has(cacheKey)) {
+          return folderCache.get(cacheKey)!;
+        }
+
+        const folderId = await this.getOrCreateFolderHierarchically(dirPath, basePath, type);
+        if (folderId) {
+          folderCache.set(cacheKey, folderId);
+        }
+        return folderId;
+      };
 
       const processItem = async (item: any, type: TrackType, audioBasePath: string, index: number) => {
         const artistName = item.artist || '未知';
@@ -133,11 +150,20 @@ export class ImportService {
         // Track ID to collect for playlist
         let trackId: number;
 
+         // Handle Folder (Compute this first as it's needed for both new and existing tracks)
+         const folderId = await getFolderId(item.path, audioBasePath, type);
+
         // CHECK EXISTENCE (Incremental Mode Logic)
         const existingTrack = await this.trackService.findByPath(audioUrl);
         if (existingTrack) {
           // If track exists, stick with its ID
           trackId = existingTrack.id;
+
+          // Check if folderId needs update
+          if (existingTrack.folderId !== folderId && folderId) {
+             await this.trackService.updateTrack(existingTrack.id, { folderId });
+          }
+           
         } else {
           // 1. Handle Artist
           let artist = await this.artistService.findByName(artistName, type);
@@ -163,8 +189,8 @@ export class ImportService {
             });
           }
 
-          // 3. Handle Folder
-          const folderId = await this.getOrCreateFolderHierarchically(path.dirname(item.path), audioBasePath, type);
+          // 3. Handle Folder (Already computed above)
+          // const folderId = await this.getOrCreateFolderHierarchically(path.dirname(item.path), audioBasePath, type);
 
           // 4. Create Track
           const newTrack = await this.trackService.createTrack({
