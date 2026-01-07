@@ -1,18 +1,20 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Post,
+    Put,
+    Req,
 } from '@nestjs/common';
 import { Track } from '@soundx/db';
+import { Request } from 'express';
 import {
-  IErrorResponse,
-  ILoadMoreData,
-  ISuccessResponse,
-  ITableData,
+    IErrorResponse,
+    ILoadMoreData,
+    ISuccessResponse,
+    ITableData,
 } from 'src/common/const';
 import { AudiobookService } from '../services/audiobook';
 
@@ -158,12 +160,13 @@ export class AudiobookController {
 
   // 新增：随机推荐 8 条未听过的有声书“专辑”（按 Track.album 聚合）
   @Get('/albums/recommend')
-  async getRandomUnlistenedAudiobookAlbums(): Promise<
+  async getRandomUnlistenedAudiobookAlbums(@Req() req: Request): Promise<
     ISuccessResponse<Track[]> | IErrorResponse
   > {
     try {
+      const userId = (req.user as any)?.userId;
       const list =
-        await this.audiobookService.getRandomUnlistenedAudiobookAlbums(8);
+        await this.audiobookService.getRandomUnlistenedAudiobookAlbums(Number(userId), 8);
       return { code: 200, message: 'success', data: list };
     } catch (error) {
       return { code: 500, message: String(error) };

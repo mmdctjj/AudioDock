@@ -92,10 +92,12 @@ export class AudiobookService {
 
   // 随机推荐：用户未听过的有声书“专辑”（按 Track.album 聚合）
   async getRandomUnlistenedAudiobookAlbums(
+    userId: number,
     limit: number = 8,
   ): Promise<Track[]> {
     // 用户听过的有声书所属专辑名集合
     const listened = await this.prisma.userAudiobookHistory.findMany({
+      where: { userId },
       include: { track: { select: { album: true, type: true } } },
     });
     const listenedAlbumNames = new Set(

@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { UserAlbumLike } from '@soundx/db';
+import { Request } from 'express';
 import {
     IErrorResponse,
     ILoadMoreData,
@@ -13,12 +14,15 @@ export class UserAlbumLikeController {
 
   @Post()
   async create(
+    @Req() req: Request,
     @Body() createUserAlbumLikeDto: UserAlbumLike,
   ): Promise<ISuccessResponse<any> | IErrorResponse> {
     try {
-      const data = await this.userAlbumLikeService.create(
-        createUserAlbumLikeDto,
-      );
+      const userId = (req.user as any)?.userId;
+      const data = await this.userAlbumLikeService.create({
+        ...createUserAlbumLikeDto,
+        userId: Number(userId),
+      });
       return {
         code: 200,
         message: 'success',
@@ -51,13 +55,13 @@ export class UserAlbumLikeController {
 
   @Delete('/unlike')
   async unlike(
-    @Query('userId') userId: string,
+    @Req() req: Request,
     @Query('albumId') albumId: string,
   ): Promise<ISuccessResponse<any> | IErrorResponse> {
     try {
-      const userIdNum = parseInt(userId, 10);
+      const userId = (req.user as any)?.userId;
       const albumIdNum = parseInt(albumId, 10);
-      const data = await this.userAlbumLikeService.removeByUserAndAlbum(userIdNum, albumIdNum);
+      const data = await this.userAlbumLikeService.removeByUserAndAlbum(Number(userId), albumIdNum);
       return {
         code: 200,
         message: 'success',
@@ -104,17 +108,18 @@ export class UserAlbumLikeController {
 
   @Get('/load-more')
   async loadMoreUserAlbumLike(
+    @Req() req: Request,
     @Query('pageSize') pageSize: string,
     @Query('loadCount') loadCount: string,
-    @Query('userId') userId: string,
     @Query('type') type?: string,
   ): Promise<
     ISuccessResponse<ILoadMoreData<UserAlbumLike[]>> | IErrorResponse
   > {
     try {
+      const userId = (req.user as any)?.userId;
       const pageSizeNum = parseInt(pageSize, 10);
       const loadCountNum = parseInt(loadCount, 10);
-      const userIdNum = parseInt(userId, 10);
+      const userIdNum = Number(userId);
 
       const list = await this.userAlbumLikeService.loadMoreUserAlbumLike(
         pageSizeNum,

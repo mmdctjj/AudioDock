@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Req } from '@nestjs/common';
 import { UserAudiobookLike } from '@soundx/db';
+import { Request } from 'express';
 import {
-  IErrorResponse,
-  ILoadMoreData,
-  ISuccessResponse,
-  ITableData,
+    IErrorResponse,
+    ILoadMoreData,
+    ISuccessResponse,
+    ITableData,
 } from 'src/common/const';
 import { UserAudiobookLikeService } from '../services/user-audiobook-like';
 
@@ -16,12 +17,15 @@ export class UserAudiobookLikeController {
 
   @Post()
   async create(
+    @Req() req: Request,
     @Body() createUserAudiobookLikeDto: UserAudiobookLike,
   ): Promise<ISuccessResponse<any> | IErrorResponse> {
     try {
-      const data = await this.userAudiobookLikeService.create(
-        createUserAudiobookLikeDto,
-      );
+      const userId = (req.user as any)?.userId;
+      const data = await this.userAudiobookLikeService.create({
+        ...createUserAudiobookLikeDto,
+        userId: Number(userId),
+      });
       return {
         code: 200,
         message: 'success',

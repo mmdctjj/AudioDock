@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { UserAlbumHistory } from '@soundx/db';
+import { Request } from 'express';
 import {
-  IErrorResponse,
-  ILoadMoreData,
-  ISuccessResponse,
-  ITableData,
+    IErrorResponse,
+    ILoadMoreData,
+    ISuccessResponse,
+    ITableData,
 } from 'src/common/const';
 import { UserAlbumHistoryService } from '../services/user-album-history';
 
@@ -16,12 +17,15 @@ export class UserAlbumHistoryController {
 
   @Post()
   async create(
+    @Req() req: Request,
     @Body() createUserAlbumHistoryDto: UserAlbumHistory,
   ): Promise<ISuccessResponse<any> | IErrorResponse> {
     try {
-      const data = await this.userAlbumHistoryService.create(
-        createUserAlbumHistoryDto,
-      );
+      const userId = (req.user as any)?.userId;
+      const data = await this.userAlbumHistoryService.create({
+        ...createUserAlbumHistoryDto,
+        userId: Number(userId),
+      });
       return {
         code: 200,
         message: 'success',
@@ -105,17 +109,18 @@ export class UserAlbumHistoryController {
 
   @Get('/load-more')
   async loadMoreUserAlbumHistory(
+    @Req() req: Request,
     @Query('pageSize') pageSize: string,
     @Query('loadCount') loadCount: string,
-    @Query('userId') userId: string,
     @Query('type') type?: string,
   ): Promise<
     ISuccessResponse<ILoadMoreData<UserAlbumHistory[]>> | IErrorResponse
   > {
     try {
+      const userId = (req.user as any)?.userId;
       const pageSizeNum = parseInt(pageSize, 10);
       const loadCountNum = parseInt(loadCount, 10);
-      const userIdNum = parseInt(userId, 10);
+      const userIdNum = Number(userId);
 
       const list = await this.userAlbumHistoryService.loadMoreUserAlbumHistory(
         pageSizeNum,

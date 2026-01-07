@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Req } from '@nestjs/common';
 import { UserAudiobookHistory } from '@soundx/db';
+import { Request } from 'express';
 import {
   IErrorResponse,
   ILoadMoreData,
@@ -16,12 +17,15 @@ export class UserAudiobookHistoryController {
 
   @Post()
   async create(
+    @Req() req: Request,
     @Body() createUserAudiobookHistoryDto: UserAudiobookHistory,
   ): Promise<ISuccessResponse<any> | IErrorResponse> {
     try {
-      const data = await this.userAudiobookHistoryService.create(
-        createUserAudiobookHistoryDto,
-      );
+      const userId = (req.user as any)?.userId;
+      const data = await this.userAudiobookHistoryService.create({
+        ...createUserAudiobookHistoryDto,
+        userId: Number(userId),
+      });
       return {
         code: 200,
         message: 'success',

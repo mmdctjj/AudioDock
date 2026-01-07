@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { UserTrackLike } from '@soundx/db';
+import { Request } from 'express';
 import {
     IErrorResponse,
     ILoadMoreData,
@@ -14,10 +15,12 @@ export class UserTrackLikeController {
 
   @Post('/create')
   async create(
+    @Req() req: Request,
     @Body() bodyData: UserTrackLike,
   ): Promise<ISuccessResponse<UserTrackLike> | IErrorResponse> {
     try {
-      const data = await this.userTrackLikeService.create(bodyData);
+      const userId = (req.user as any)?.userId;
+      const data = await this.userTrackLikeService.create({ ...bodyData, userId: Number(userId) });
       return {
         code: 200,
         message: 'success',
@@ -79,7 +82,7 @@ export class UserTrackLikeController {
 
   @Get('/load-more')
   async loadMoreUserTrackLike(
-    @Query('userId') userId: string,
+    @Req() req: Request,
     @Query('loadCount') loadCount: string,
     @Query('pageSize') pageSize: string = '10',
     @Query('type') type?: string,
@@ -87,6 +90,7 @@ export class UserTrackLikeController {
     ISuccessResponse<ILoadMoreData<UserTrackLike[]>> | IErrorResponse
   > {
     try {
+      const userId = (req.user as any)?.userId;
       const list = await this.userTrackLikeService.loadMoreUserTrackLike(
         Number(loadCount),
         Number(pageSize),
@@ -155,13 +159,14 @@ export class UserTrackLikeController {
 
   @Delete('/unlike')
   async removeByUserAndTrack(
-    @Query('userId') userId: string,
+    @Req() req: Request,
     @Query('trackId') trackId: string,
   ): Promise<ISuccessResponse<{ count: number }> | IErrorResponse> {
     try {
+      const userId = (req.user as any)?.userId;
       const data = await this.userTrackLikeService.removeByUserAndTrack(
-        +userId,
-        +trackId,
+        Number(userId),
+        Number(trackId),
       );
       return {
         code: 200,
@@ -179,7 +184,6 @@ export class UserTrackLikeController {
   @Delete(':id')
   async remove(
     @Param('id') id: string,
-    @Param('userId') userId: string,
   ): Promise<ISuccessResponse<UserTrackLike> | IErrorResponse> {
     try {
       const data = await this.userTrackLikeService.remove(+id);

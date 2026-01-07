@@ -1,22 +1,22 @@
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Logger,
-    Param,
-    Post,
-    Put,
-    Query,
-    Req,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Logger,
+  Param,
+  Post,
+  Put,
+  Query,
+  Req,
 } from '@nestjs/common';
 import { Album, TrackType } from '@soundx/db';
 import { Request } from 'express';
 import {
-    IErrorResponse,
-    ILoadMoreData,
-    ISuccessResponse,
-    ITableData,
+  IErrorResponse,
+  ILoadMoreData,
+  ISuccessResponse,
+  ITableData,
 } from 'src/common/const';
 import { LogMethod } from '../common/log-method.decorator';
 import { AlbumService } from '../services/album';
@@ -104,15 +104,18 @@ export class AlbumController {
   @Get('/album/load-more')
   @LogMethod()
   async loadMoreAlbum(
+    @Req() req: Request,
     @Query('pageSize') pageSize: number,
     @Query('loadCount') loadCount: number,
-    @Query('type') type?: TrackType,
+    @Query('type') type: TrackType,
   ): Promise<ISuccessResponse<ILoadMoreData<Album[]>> | IErrorResponse> {
     try {
+      const userId = (req.user as any)?.userId;
       const albumList = await this.albumService.loadMoreAlbum(
         Number(pageSize),
         Number(loadCount),
         type,
+        Number(userId),
       );
       const total = await this.albumService.albumCount(type);
       return {
@@ -256,16 +259,18 @@ export class AlbumController {
   @Get('/album/latest')
   @LogMethod()
   async getLatestAlbums(
-    @Query('type') type?: string,
+    @Req() req: Request,
+    @Query('type') type: TrackType,
     @Query('random') random?: string,
     @Query('pageSize') pageSize?: string,
   ): Promise<ISuccessResponse<Album[]> | IErrorResponse> {
     try {
+      const userId = (req.user as any)?.userId;
       const isRandom = random === 'true';
       const limit = pageSize ? parseInt(pageSize, 10) : 8;
       const list = isRandom 
-        ? await this.albumService.getRandomAlbums(limit, type)
-        : await this.albumService.getLatestAlbums(limit, type);
+        ? await this.albumService.getRandomAlbums(limit, type, Number(userId))
+        : await this.albumService.getLatestAlbums(limit, type, Number(userId));
       return { code: 200, message: 'success', data: list };
     } catch (error) {
       return { code: 500, message: String(error) };
@@ -277,7 +282,7 @@ export class AlbumController {
   @LogMethod()
   async getRandomUnlistenedAlbums(
     @Req() req: Request,
-    @Query('type') type?: string,
+    @Query('type') type: TrackType,
     @Query('pageSize') pageSize?: string,
   ): Promise<ISuccessResponse<Album[]> | IErrorResponse> {
     try {
@@ -300,13 +305,15 @@ export class AlbumController {
   @Get('/album/search')
   @LogMethod()
   async searchAlbums(
+    @Req() req: Request,
     @Query('keyword') keyword: string,
     @Query('type') type?: string,
     @Query('limit') limit?: string,
   ): Promise<ISuccessResponse<Album[]> | IErrorResponse> {
     try {
+      const userId = (req.user as any)?.userId;
       const limitNum = limit ? parseInt(limit, 10) : 10;
-      const albums = await this.albumService.searchAlbums(keyword, type, limitNum);
+      const albums = await this.albumService.searchAlbums(keyword, type, limitNum, Number(userId));
       return {
         code: 200,
         message: 'success',
@@ -323,13 +330,15 @@ export class AlbumController {
   @Get('/album/:id')
   @LogMethod()
   async getAlbumById(
+    @Req() req: Request,
     @Param('id') id: string,
   ): Promise<ISuccessResponse<Album> | IErrorResponse> {
     try {
+      const userId = (req.user as any)?.userId;
       if (isNaN(Number(id))) {
         return { code: 500, message: 'Invalid ID' };
       }
-      const album = await this.albumService.getAlbumById(parseInt(id));
+      const album = await this.albumService.getAlbumById(parseInt(id), userId ? parseInt(userId) : undefined);
       if (!album) {
         return { code: 500, message: 'Album not found' };
       }
@@ -349,14 +358,15 @@ export class AlbumController {
   @Get('/album/:id/tracks')
   @LogMethod()
   async getAlbumTracks(
+    @Req() req: Request,
     @Param('id') id: string,
     @Query('pageSize') pageSize: number,
     @Query('skip') skip: number,
     @Query('sort') sort: 'asc' | 'desc',
     @Query('keyword') keyword: string,
-    @Query('userId') userId: string,
   ): Promise<ISuccessResponse<any> | IErrorResponse> {
     try {
+      const userId = (req.user as any)?.userId;
       if (isNaN(Number(id))) {
         return { code: 500, message: 'Invalid ID' };
       }

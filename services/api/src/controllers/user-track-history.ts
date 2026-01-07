@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { UserTrackHistory } from '@soundx/db';
+import { Request } from 'express';
 import {
     IErrorResponse,
     ILoadMoreData,
@@ -16,12 +17,15 @@ export class UserTrackHistoryController {
 
   @Post()
   async create(
+    @Req() req: Request,
     @Body() createUserTrackHistoryDto: UserTrackHistory,
   ): Promise<ISuccessResponse<any> | IErrorResponse> {
     try {
-      const data = await this.userTrackHistoryService.create(
-        createUserTrackHistoryDto,
-      );
+      const userId = (req.user as any)?.userId;
+      const data = await this.userTrackHistoryService.create({
+        ...createUserTrackHistoryDto,
+        userId: Number(userId),
+      });
       return {
         code: 200,
         message: 'success',
@@ -54,19 +58,20 @@ export class UserTrackHistoryController {
 
   @Get('/table-list')
   async getUserTrackHistoryTableList(
+    @Req() req: Request,
     @Param('pageSize') pageSize: number,
     @Param('current') current: number,
-    @Query('userId') userId: number,
   ): Promise<
     ISuccessResponse<ITableData<UserTrackHistory[]>> | IErrorResponse
   > {
     try {
+      const userId = (req.user as any)?.userId;
       const list =
         await this.userTrackHistoryService.getUserTrackHistoryTableList(
           pageSize,
           current,
         );
-      const total = await this.userTrackHistoryService.userTrackHistoryCount(userId);
+      const total = await this.userTrackHistoryService.userTrackHistoryCount(Number(userId));
       return {
         code: 200,
         message: 'success',
@@ -87,14 +92,15 @@ export class UserTrackHistoryController {
 
   @Get('/load-more')
   async loadMoreUserTrackHistory(
+    @Req() req: Request,
     @Query('pageSize') pageSize: number,
     @Query('loadCount') loadCount: number,
-    @Query('userId') userId: number,
     @Query('type') type?: string,
   ): Promise<
     ISuccessResponse<ILoadMoreData<UserTrackHistory[]>> | IErrorResponse
   > {
     try {
+      const userId = (req.user as any)?.userId;
       const pageSizeNum = Number(pageSize)
       const loadCountNum = Number(loadCount)
       const userIdNum = Number(userId)
@@ -125,9 +131,10 @@ export class UserTrackHistoryController {
 
   @Get('/latest')
   async getLatest(
-    @Query('userId') userId: number,
+    @Req() req: Request,
   ): Promise<ISuccessResponse<UserTrackHistory> | IErrorResponse> {
     try {
+      const userId = (req.user as any)?.userId;
       const data = await this.userTrackHistoryService.getLatest(Number(userId));
       return {
         code: 200,

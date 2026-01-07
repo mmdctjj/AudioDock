@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { deleteTrack } from "@soundx/services";
 import React from "react";
 import {
-    Alert,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../context/ThemeContext";
@@ -18,7 +18,7 @@ interface TrackMoreModalProps {
   track: Track | null;
   onClose: () => void;
   onAddToPlaylist: (track: Track) => void;
-  onShowProperties: (track: Track) => void;
+  onShowProperties?: (track: Track) => void;
   onDeleteSuccess?: (trackId: number) => void;
 }
 
@@ -99,7 +99,7 @@ export const TrackMoreModal: React.FC<TrackMoreModalProps> = ({
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => {
-              onShowProperties(track);
+              onShowProperties?.(track);
               onClose();
             }}
           >

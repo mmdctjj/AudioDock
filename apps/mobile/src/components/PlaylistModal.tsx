@@ -3,22 +3,21 @@ import { useAuth } from "@/src/context/AuthContext";
 import { usePlayer } from "@/src/context/PlayerContext";
 import { useTheme } from "@/src/context/ThemeContext";
 import { TrackType } from "@/src/models";
-import { getAlbumHistory, getFavoriteAlbums } from "@soundx/services";
-import { getTrackHistory, getFavoriteTracks } from "@soundx/services";
 import { usePlayMode } from "@/src/utils/playMode";
 import { Ionicons } from "@expo/vector-icons";
+import { getAlbumHistory, getFavoriteAlbums, getFavoriteTracks, getTrackHistory } from "@soundx/services";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getBaseURL } from "../https";
@@ -161,12 +160,12 @@ export const PlaylistModal = () => {
               color={colors.secondary}
             />
           )}
-          {currentTrack?.type === TrackType.AUDIOBOOK &&
-          item.progress &&
+          {(currentTrack?.type === TrackType.AUDIOBOOK || mode === "AUDIOBOOK") &&
+          (item as any).progress &&
           !isAlbum ? (
             <Text style={[styles.progressText, { color: colors.secondary }]}>
               已听
-              {Math.floor(((item.progress || 0) / (item.duration || 1)) * 100)}%
+              {Math.floor(((item as any).progress / (item.duration || 1)) * 100)}%
             </Text>
           ) : null}
         </View>

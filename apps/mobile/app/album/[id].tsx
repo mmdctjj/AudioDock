@@ -8,24 +8,30 @@ import { useTheme } from "@/src/context/ThemeContext";
 import { getBaseURL } from "@/src/https";
 import { Album, Track } from "@/src/models";
 import { Ionicons } from "@expo/vector-icons";
-import { getAlbumById, getAlbumTracks, toggleAlbumLike, unlikeAlbum } from "@soundx/services";
+import {
+  getAlbumById,
+  getAlbumTracks,
+  toggleAlbumLike,
+  unlikeAlbum,
+} from "@soundx/services";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function AlbumDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
-  const { playTrack, playTrackList, currentTrack, isPlaying } = usePlayer();
+  const { playTrack, playTrackList, currentTrack, isPlaying, seekTo } =
+    usePlayer();
   const { user } = useAuth();
   const [album, setAlbum] = useState<Album | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -96,10 +102,10 @@ export default function AlbumDetailScreen() {
   const handleToggleLike = async () => {
     if (!user || !album) return;
     try {
-      const res = isLiked 
+      const res = isLiked
         ? await unlikeAlbum(album.id, user.id)
         : await toggleAlbumLike(album.id, user.id);
-        
+
       if (res.code === 200) {
         setIsLiked(!isLiked);
       }
@@ -173,11 +179,44 @@ export default function AlbumDetailScreen() {
             </Text>
             <View style={styles.actions}>
               <TouchableOpacity
-                style={[styles.playAllButton, { backgroundColor: colors.primary }]}
-                onPress={() => playTrackList(tracks, 0)}
+                style={[
+                  styles.playAllButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => {
+                  let startTrackIndex = 0;
+                  let startTime = 0;
+
+                  // Check if Audiobook and needs resume
+                  if (album.type === "AUDIOBOOK") {
+                    const resumeTrackId = (album as any).resumeTrackId;
+                    const resumeProgress = (album as any).resumeProgress;
+
+                    if (resumeTrackId) {
+                      const foundIndex = tracks.findIndex(
+                        (t) => t.id === resumeTrackId
+                      );
+                      if (foundIndex !== -1) {
+                        startTrackIndex = foundIndex;
+                        startTime = resumeProgress || 0;
+                      }
+                    }
+                  }
+
+                  playTrackList(tracks, startTrackIndex).then(() => {
+                    if (startTime > 0) {
+                      // Small delay to ensure track is loaded
+                      setTimeout(() => seekTo(startTime), 500);
+                    }
+                  });
+                }}
               >
                 <Ionicons name="play" size={20} color={colors.background} />
-                <Text style={[styles.playAllText, { color: colors.background }]}>播放全部</Text>
+                <Text
+                  style={[styles.playAllText, { color: colors.background }]}
+                >
+                  播放全部
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.likeButton, { backgroundColor: colors.card }]}
@@ -197,6 +236,13 @@ export default function AlbumDetailScreen() {
             style={[styles.trackItem, { borderBottomColor: colors.border }]}
             onPress={() => {
               playTrackList(tracks, index);
+              // If Audiobook and has progress, try to resume
+               if (album.type === 'AUDIOBOOK' && ((item as any).progress > 0 || item.listenedAsAudiobookByUsers?.[0]?.progress)) {
+                  const progress = (item as any).progress || item.listenedAsAudiobookByUsers?.[0]?.progress;
+                  if (progress > 0) {
+                      setTimeout(() => seekTo(progress), 500);
+                  }
+               }
             }}
             onLongPress={() => {
               setSelectedTrack(item);
@@ -207,7 +253,17 @@ export default function AlbumDetailScreen() {
               {currentTrack?.id === item.id && isPlaying ? (
                 <PlayingIndicator />
               ) : (
-                <Text style={[styles.trackIndex, { color: currentTrack?.id === item.id ? colors.primary : colors.secondary }]}>
+                <Text
+                  style={[
+                    styles.trackIndex,
+                    {
+                      color:
+                        currentTrack?.id === item.id
+                          ? colors.primary
+                          : colors.secondary,
+                    },
+                  ]}
+                >
                   {index + 1}
                 </Text>
               )}
@@ -223,18 +279,32 @@ export default function AlbumDetailScreen() {
             />
             <View style={styles.trackInfo}>
               <Text
-                style={[styles.trackName, { color: colors.text }]}
+                style={[
+                  styles.trackName,
+                  {
+                    color:
+                      album.type === "AUDIOBOOK" &&
+                      ((item as any).progress > 0 ||
+                        item.listenedAsAudiobookByUsers?.[0]?.progress)
+                        ? colors.secondary
+                        : colors.text,
+                  },
+                ]}
                 numberOfLines={1}
               >
                 {item.name}
               </Text>
             </View>
             {album.type === "AUDIOBOOK" &&
-            item.listenedAsAudiobookByUsers?.[0]?.progress ? (
+            ((item as any).progress > 0 ||
+              item.listenedAsAudiobookByUsers?.[0]?.progress) ? (
               <View style={{ marginRight: 10 }}>
                 <Text style={{ fontSize: 10, color: colors.primary }}>
+                  已听
                   {Math.floor(
-                    ((item.listenedAsAudiobookByUsers[0].progress || 0) /
+                    (((item as any).progress ||
+                      item.listenedAsAudiobookByUsers?.[0]?.progress ||
+                      0) /
                       (item.duration || 1)) *
                       100
                   )}
@@ -244,7 +314,9 @@ export default function AlbumDetailScreen() {
             ) : null}
             <Text style={[styles.trackDuration, { color: colors.secondary }]}>
               {item.duration
-                ? `${Math.floor(item.duration / 60)}:${(item.duration % 60).toString().padStart(2, "0")}`
+                ? `${Math.floor(item.duration / 60)}:${(item.duration % 60)
+                    .toString()
+                    .padStart(2, "0")}`
                 : "--:--"}
             </Text>
           </TouchableOpacity>
@@ -277,7 +349,7 @@ export default function AlbumDetailScreen() {
       <AddToPlaylistModal
         visible={addToPlaylistVisible}
         trackId={selectedTrack?.id ?? null}
-        trackIds={selectedTrack ? undefined : tracks.map(t => t.id)}
+        trackIds={selectedTrack ? undefined : tracks.map((t) => t.id)}
         onClose={() => {
           setAddToPlaylistVisible(false);
           setSelectedTrack(null);
@@ -287,7 +359,7 @@ export default function AlbumDetailScreen() {
       <AlbumMoreModal
         visible={albumMoreVisible}
         album={album}
-        trackIds={tracks.map(t => t.id)}
+        trackIds={tracks.map((t) => t.id)}
         onClose={() => setAlbumMoreVisible(false)}
         onAddToPlaylist={() => {
           setAlbumMoreVisible(false);
@@ -312,9 +384,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingBottom: 10,
     zIndex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   backButton: {
     padding: 5,
@@ -339,13 +411,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   actions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 20,
   },
   playAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 25,
     paddingVertical: 10,
     borderRadius: 25,
@@ -353,14 +425,14 @@ const styles = StyleSheet.create({
   },
   playAllText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   likeButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginLeft: 15,
   },
   trackList: {
@@ -374,12 +446,12 @@ const styles = StyleSheet.create({
   },
   trackIndex: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   trackIndexContainer: {
     width: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   trackInfo: {
     flex: 1,

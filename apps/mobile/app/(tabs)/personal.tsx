@@ -1,24 +1,24 @@
 import { useFocusEffect } from "@react-navigation/native";
 import {
-  createPlaylist,
-  getAlbumHistory,
-  getFavoriteAlbums,
-  getFavoriteTracks,
-  getPlaylists,
-  getTrackHistory
+    createPlaylist,
+    getAlbumHistory,
+    getFavoriteAlbums,
+    getFavoriteTracks,
+    getPlaylists,
+    getTrackHistory
 } from "@soundx/services";
 import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Modal,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Modal,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
@@ -173,7 +173,7 @@ export default function PersonalScreen() {
     return (
       <TouchableOpacity 
         style={[styles.item, { borderBottomColor: colors.border }]}
-        onPress={() => {
+        onPress={async () => {
           if (isPlaylist) {
             router.push(`/playlist/${(data as Playlist).id}`);
           } else if (isAlbum) {
@@ -188,10 +188,29 @@ export default function PersonalScreen() {
         {isPlaylist ? (
           <StackedCover tracks={(item as Playlist).tracks || []} />
         ) : (
-          <Image
-            source={{ uri: coverUrl }}
-            style={styles.itemCover}
-          />
+          <View style={{ position: 'relative' }}>
+            <Image
+              source={{ uri: coverUrl }}
+              style={styles.itemCover}
+            />
+            {/* Progress Bar for Audiobook Albums */}
+            {isAlbum && activeTab === "history" && mode === "AUDIOBOOK" && (data as any).progress > 0 && (
+                <View style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 15, // marginRight of cover
+                    height: 3,
+                    backgroundColor: 'rgba(0,0,0,0.3)'
+                }}>
+                   <View style={{
+                       width: `${(data as any).progress}%`,
+                       height: '100%',
+                       backgroundColor: colors.primary
+                   }} />
+                </View>
+            )}
+          </View>
         )}
         <View style={styles.itemInfo}>
           <Text style={[styles.itemTitle, { color: colors.text }]} numberOfLines={1}>

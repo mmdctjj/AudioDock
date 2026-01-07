@@ -10,17 +10,17 @@ import { useRouter } from "expo-router";
 import * as ScreenOrientation from 'expo-screen-orientation';
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Dimensions,
-  FlatList,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    Animated,
+    Dimensions,
+    FlatList,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PlayerMoreModal } from "../src/components/PlayerMoreModal";
@@ -337,18 +337,25 @@ export default function PlayerScreen() {
           ]}
           onPress={() => playTrackList(trackList, index)}
         >
-          <Text
-            style={[
-              styles.playlistItemText,
-              {
-                color:
-                  currentTrack?.id === item.id ? colors.primary : colors.text,
-              },
-            ]}
-            numberOfLines={1}
-          >
-            {item.name}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                styles.playlistItemText,
+                {
+                  color:
+                    currentTrack?.id === item.id ? colors.primary : colors.text,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {item.name}
+            </Text>
+            {currentTrack?.type === TrackType.AUDIOBOOK && (item as any).progress > 0 && (
+                 <Text style={{ fontSize: 10, color: colors.secondary, marginTop: 2 }}>
+                    已听 {Math.floor(((item as any).progress / (item.duration || 1)) * 100)}%
+                 </Text>
+            )}
+          </View>
         </TouchableOpacity>
       )}
       style={styles.playlist}

@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req } from '@nestjs/common';
 import { TrackType } from '@soundx/db';
+import { Request } from 'express';
 import { PlaylistService } from '../services/playlist';
 
 @Controller('playlists')
@@ -7,10 +8,10 @@ export class PlaylistController {
   constructor(private readonly playlistService: PlaylistService) { }
 
   @Post()
-  async create(@Body() body: any) {
+  async create(@Req() req: Request, @Body() body: any) {
     try {
-      console.log(body);
-      const data = await this.playlistService.create(body);
+      const userId = (req.user as any)?.userId;
+      const data = await this.playlistService.create({ ...body, userId });
       return { code: 200, message: 'success', data };
     } catch (error) {
       return { code: 500, message: error };
@@ -18,8 +19,9 @@ export class PlaylistController {
   }
 
   @Get()
-  async findAll(@Query('userId') userId: string, @Query('type') type?: TrackType) {
+  async findAll(@Req() req: Request, @Query('type') type?: TrackType) {
     try {
+      const userId = (req.user as any)?.userId;
       const data = await this.playlistService.findAll(Number(userId), type);
       return { code: 200, message: 'success', data };
     } catch (error) {

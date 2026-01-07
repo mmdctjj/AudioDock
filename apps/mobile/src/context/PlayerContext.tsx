@@ -2,23 +2,23 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { addAlbumToHistory, addToHistory, getLatestHistory, reportAudiobookProgress } from "@soundx/services";
 import * as Device from "expo-device";
 import React, {
-    createContext,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
 } from "react";
 import { Alert } from "react-native";
 import TrackPlayer, {
-    AppKilledPlaybackBehavior,
-    Capability,
-    Event,
-    IOSCategory,
-    IOSCategoryMode,
-    IOSCategoryOptions,
-    State,
-    useProgress,
-    useTrackPlayerEvents,
+  AppKilledPlaybackBehavior,
+  Capability,
+  Event,
+  IOSCategory,
+  IOSCategoryMode,
+  IOSCategoryOptions,
+  State,
+  useProgress,
+  useTrackPlayerEvents,
 } from "react-native-track-player";
 import { getBaseURL } from "../https";
 import { Track, TrackType } from "../models";
@@ -100,7 +100,7 @@ export const usePlayer = () => useContext(PlayerContext);
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { user, device } = useAuth();
+  const { user, device, isLoading: isAuthLoading } = useAuth();
   const { mode } = usePlayMode();
   const { showNotification } = useNotification();
   const { acceptRelay, cacheEnabled } = useSettings();
@@ -390,7 +390,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Mode switching & Initial Load Persistence
   useEffect(() => {
-    if (!isSetup) return;
+    if (!isSetup || isAuthLoading) return;
 
     const handleModeChange = async () => {
       if (isInitialLoadRef.current) {
@@ -405,7 +405,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     handleModeChange();
-  }, [mode, isSetup]);
+  }, [mode, isSetup, isAuthLoading]);
 
   // Periodic persistence
   useEffect(() => {

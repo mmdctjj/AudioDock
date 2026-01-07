@@ -34,8 +34,15 @@ export class AlbumService {
     return await this.prisma.album.findMany({ where: { artist } });
   }
 
-  async getAlbumById(id: number): Promise<Album | null> {
-    return await this.prisma.album.findUnique({ where: { id }, include: { likedByUsers: true, listenedByUsers: true } });
+  async getAlbumById(id: number, userId?: number): Promise<Album | null> {
+    const album = await this.prisma.album.findUnique({ where: { id }, include: { likedByUsers: true, listenedByUsers: true } });
+    if (!album) return null;
+
+    if (album.type === 'AUDIOBOOK' && userId) {
+      const [enriched] = await this.attachProgressToAlbums([album], userId);
+      return enriched;
+    }
+    return album;
   }
 
   async getAlbumTableList(pageSize: number, current: number): Promise<Album[]> {
@@ -45,7 +52,7 @@ export class AlbumService {
     });
   }
 
-  async loadMoreAlbum(pageSize: number, loadCount: number, type?: any): Promise<Album[]> {
+  async loadMoreAlbum(pageSize: number, loadCount: number, type: TrackType, userId: number): Promise<Album[]> {
     const result = await this.prisma.album.findMany({
       skip: loadCount * pageSize,
       take: pageSize,
@@ -53,7 +60,7 @@ export class AlbumService {
     });
 
     if (type === 'AUDIOBOOK') {
-      return await this.attachProgressToAlbums(result, 1); // Default userId 1
+      return await this.attachProgressToAlbums(result, userId); // Default userId 1
     }
 
     return result;
@@ -103,7 +110,7 @@ export class AlbumService {
   }
 
   // 新增：最近专辑（按 id 倒序）
-  async getLatestAlbums(limit = 8, type?: any): Promise<Album[]> {
+  async getLatestAlbums(limit = 8, type: TrackType, userId: number): Promise<Album[]> {
     const result = await this.prisma.album.findMany({
       where: type ? { type } : undefined,
       orderBy: { id: 'desc' },
@@ -111,14 +118,14 @@ export class AlbumService {
     });
 
     if (type === 'AUDIOBOOK') {
-      return await this.attachProgressToAlbums(result, 1); // Default userId 1
+      return await this.attachProgressToAlbums(result, userId); // Default userId 1
     }
 
     return result;
   }
 
   // 新增：获取随机专辑
-  async getRandomAlbums(limit = 8, type?: any): Promise<Album[]> {
+  async getRandomAlbums(limit = 8, type: TrackType, userId: number): Promise<Album[]> {
     const count = await this.prisma.album.count({
       where: type ? { type } : undefined,
     });
@@ -133,14 +140,14 @@ export class AlbumService {
     const shuffled = result.sort(() => Math.random() - 0.5);
 
     if (type === 'AUDIOBOOK') {
-      return await this.attachProgressToAlbums(shuffled, 1); // Default userId 1
+      return await this.attachProgressToAlbums(shuffled, userId); // Default userId 1
     }
 
     return shuffled;
   }
 
   // 随机推荐：用户未听过的专辑
-  async getRandomUnlistenedAlbums(userId: number, limit = 8, type?: any): Promise<Album[]> {
+  async getRandomUnlistenedAlbums(userId: number, limit = 8, type?: TrackType): Promise<Album[]> {
     const listened = await this.prisma.userAlbumHistory.findMany({
       where: { userId },
       select: { albumId: true },
@@ -169,7 +176,7 @@ export class AlbumService {
   }
 
   // 搜索专辑
-  async searchAlbums(keyword: string, type?: any, limit: number = 10): Promise<Album[]> {
+  async searchAlbums(keyword: string, type: any, limit: number = 10, userId: number): Promise<Album[]> {
     const where: any = {
       OR: [
         { name: { contains: keyword } },
@@ -188,7 +195,7 @@ export class AlbumService {
     });
 
     if (type === 'AUDIOBOOK') {
-      return await this.attachProgressToAlbums(albums, 1); // Default userId 1
+      return await this.attachProgressToAlbums(albums, userId); // Default userId 1
     }
     return albums;
   }
