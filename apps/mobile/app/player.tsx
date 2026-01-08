@@ -7,20 +7,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { Slider } from "@miblanchard/react-native-slider";
 import { toggleLike, toggleUnLike } from "@soundx/services";
 import { useRouter } from "expo-router";
-import * as ScreenOrientation from 'expo-screen-orientation';
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Animated,
-    Dimensions,
-    FlatList,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PlayerMoreModal } from "../src/components/PlayerMoreModal";
@@ -110,28 +109,6 @@ export default function PlayerScreen() {
       setLiked(!!isLiked);
     }
   }, [currentTrack, user]);
-
-  useEffect(() => {
-    // Unlock rotation when entering player screen
-    const unlockOrientation = async () => {
-      try {
-        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.DEFAULT);
-      } catch (error) {
-        console.warn("Failed to unlock orientation:", error);
-      }
-    };
-    
-    unlockOrientation();
-
-    return () => {
-      // Lock back to portrait when leaving
-      try {
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-      } catch (error) {
-        console.warn("Failed to lock orientation to portrait:", error);
-      }
-    };
-  }, []);
   
   const breatheAnim = useRef(new Animated.Value(1)).current;
 

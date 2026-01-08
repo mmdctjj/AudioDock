@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { StatusBar } from "expo-status-bar";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useColorScheme } from "react-native";
+import { useSettings } from "./SettingsContext";
 
 type ThemeType = "light" | "dark";
 
@@ -58,10 +60,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [theme, setTheme] = useState<ThemeType>("light");
+  const systemColorScheme = useColorScheme();
+  const { autoTheme } = useSettings();
 
   useEffect(() => {
-    loadTheme();
-  }, []);
+    if (autoTheme && systemColorScheme) {
+      setTheme(systemColorScheme as ThemeType);
+    }
+  }, [autoTheme, systemColorScheme]);
+
+  useEffect(() => {
+    if (!autoTheme) {
+      loadTheme();
+    }
+  }, [autoTheme]);
 
   const loadTheme = async () => {
     try {
@@ -75,6 +87,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const toggleTheme = async () => {
+    if (autoTheme) return; // Prevent manual toggle when auto mode is on
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
     try {

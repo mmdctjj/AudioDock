@@ -187,19 +187,17 @@ export default function AlbumDetailScreen() {
                   let startTrackIndex = 0;
                   let startTime = 0;
 
-                  // Check if Audiobook and needs resume
-                  if (album.type === "AUDIOBOOK") {
-                    const resumeTrackId = (album as any).resumeTrackId;
-                    const resumeProgress = (album as any).resumeProgress;
+                  // Check if needs resume
+                  const resumeTrackId = album.resumeTrackId;
+                  const resumeProgress = album.resumeProgress;
 
-                    if (resumeTrackId) {
-                      const foundIndex = tracks.findIndex(
-                        (t) => t.id === resumeTrackId
-                      );
-                      if (foundIndex !== -1) {
-                        startTrackIndex = foundIndex;
-                        startTime = resumeProgress || 0;
-                      }
+                  if (resumeTrackId) {
+                    const foundIndex = tracks.findIndex(
+                      (t) => t.id === resumeTrackId
+                    );
+                    if (foundIndex !== -1) {
+                      startTrackIndex = foundIndex;
+                      startTime = resumeProgress || 0;
                     }
                   }
 
@@ -215,7 +213,7 @@ export default function AlbumDetailScreen() {
                 <Text
                   style={[styles.playAllText, { color: colors.background }]}
                 >
-                  播放全部
+                  {album.resumeTrackId ? "继续播放" : "播放全部"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -237,12 +235,18 @@ export default function AlbumDetailScreen() {
             onPress={() => {
               playTrackList(tracks, index);
               // If Audiobook and has progress, try to resume
-               if (album.type === 'AUDIOBOOK' && ((item as any).progress > 0 || item.listenedAsAudiobookByUsers?.[0]?.progress)) {
-                  const progress = (item as any).progress || item.listenedAsAudiobookByUsers?.[0]?.progress;
-                  if (progress > 0) {
-                      setTimeout(() => seekTo(progress), 500);
-                  }
-               }
+              if (
+                album.type === "AUDIOBOOK" &&
+                ((item as any).progress > 0 ||
+                  item.listenedAsAudiobookByUsers?.[0]?.progress)
+              ) {
+                const progress =
+                  (item as any).progress ||
+                  item.listenedAsAudiobookByUsers?.[0]?.progress;
+                if (progress > 0) {
+                  setTimeout(() => seekTo(progress), 500);
+                }
+              }
             }}
             onLongPress={() => {
               setSelectedTrack(item);

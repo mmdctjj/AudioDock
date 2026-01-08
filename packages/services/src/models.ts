@@ -78,6 +78,8 @@ export interface Album {
   likedByUsers?: UserAlbumLike[];
   listenedByUsers?: UserAlbumHistory[];
   progress?: number;
+  resumeTrackId?: number | null;
+  resumeProgress?: number | null;
 }
 
 export interface Artist {

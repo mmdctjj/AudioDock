@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../src/context/AuthContext";
@@ -23,7 +23,7 @@ export default function SettingsScreen() {
   const { colors, theme, toggleTheme } = useTheme();
   const { mode, setMode } = usePlayMode();
   const { logout } = useAuth();
-  const { acceptRelay, acceptSync, cacheEnabled, updateSetting } = useSettings();
+  const { acceptRelay, acceptSync, cacheEnabled, autoOrientation, autoTheme, updateSetting } = useSettings();
 
   const renderSettingRow = (
     label: string,
@@ -62,10 +62,26 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>通用</Text>
           
           {renderSettingRow(
-            "深色模式",
-            "开启或关闭应用的深色外观",
-            theme === "dark",
-            toggleTheme
+            "跟随系统主题",
+            "开启后将根据系统设置自动切换浅色/深色模式",
+            autoTheme,
+            (val) => updateSetting("autoTheme", val)
+          )}
+
+          <View style={{ opacity: autoTheme ? 0.5 : 1 }}>
+            {renderSettingRow(
+              "深色模式",
+              "开启或关闭应用的深色外观",
+              theme === "dark",
+              autoTheme ? () => {} : toggleTheme
+            )}
+          </View>
+
+          {renderSettingRow(
+            "自动横竖屏",
+            "开启后应用将跟随手机重力感应自动旋转",
+            autoOrientation,
+            (val) => updateSetting("autoOrientation", val)
           )}
 
           {renderSettingRow(

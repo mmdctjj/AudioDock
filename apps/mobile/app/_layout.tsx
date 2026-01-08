@@ -11,7 +11,7 @@ export const unstable_settings = {
 };
 
 import { PlaylistModal } from "../src/components/PlaylistModal";
-import { SettingsProvider } from "../src/context/SettingsContext";
+import { SettingsProvider, useSettings } from "../src/context/SettingsContext";
 import { SyncProvider } from "../src/context/SyncContext";
 
 function RootLayoutNav() {
@@ -88,17 +88,41 @@ function RootLayoutNav() {
   );
 }
 
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
+import { View } from "react-native";
 import PlaybackNotification from "../src/components/PlaybackNotification";
 import { NotificationProvider } from "../src/context/NotificationContext";
+
+function OrientationHandler() {
+  const { autoOrientation } = useSettings();
+
+  useEffect(() => {
+    const handleOrientation = async () => {
+      try {
+        if (autoOrientation) {
+          await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.DEFAULT);
+        } else {
+          await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+        }
+      } catch (error) {
+        console.warn("Failed to set orientation lock:", error);
+      }
+    };
+    handleOrientation();
+  }, [autoOrientation]);
+
+  return <View />;
+}
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
-        <AuthProvider>
-          <SettingsProvider>
+      <SettingsProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <OrientationHandler />
             <NotificationProvider>
               <SyncProvider>
                 <PlayModeProvider>
@@ -109,9 +133,9 @@ export default function RootLayout() {
                 </PlayModeProvider>
               </SyncProvider>
             </NotificationProvider>
-          </SettingsProvider>
-        </AuthProvider>
-      </ThemeProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </SettingsProvider>
     </GestureHandlerRootView>
   );
 }

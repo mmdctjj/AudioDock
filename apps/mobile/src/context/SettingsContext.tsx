@@ -5,6 +5,8 @@ interface SettingsState {
   acceptRelay: boolean;
   acceptSync: boolean;
   cacheEnabled: boolean;
+  autoOrientation: boolean;
+  autoTheme: boolean;
 }
 
 interface SettingsContextType extends SettingsState {
@@ -19,6 +21,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     acceptRelay: true,
     acceptSync: true,
     cacheEnabled: false,
+    autoOrientation: true,
+    autoTheme: true,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -30,7 +34,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const saved = await AsyncStorage.getItem('mobile-settings');
       if (saved) {
-        setSettings(JSON.parse(saved));
+        setSettings(prev => ({ ...prev, ...JSON.parse(saved) }));
       }
     } catch (e) {
       console.error('Failed to load settings', e);
