@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../src/context/AuthContext";
 import { useSettings } from "../src/context/SettingsContext";
 import { useTheme } from "../src/context/ThemeContext";
-import { clearCache } from "../src/services/cache";
+import { clearCache, getCacheSize } from "../src/services/cache";
 import { usePlayMode } from "../src/utils/playMode";
 
 export default function SettingsScreen() {
@@ -24,6 +24,26 @@ export default function SettingsScreen() {
   const { mode, setMode } = usePlayMode();
   const { logout } = useAuth();
   const { acceptRelay, acceptSync, cacheEnabled, autoOrientation, autoTheme, updateSetting } = useSettings();
+  const [cacheSize, setCacheSize] = React.useState<string>("0 B");
+
+  const fetchCacheSize = async () => {
+    const size = await getCacheSize();
+    if (size === 0) {
+      setCacheSize("0 B");
+    } else if (size < 1024) {
+      setCacheSize(`${size} B`);
+    } else if (size < 1024 * 1024) {
+      setCacheSize(`${(size / 1024).toFixed(1)} KB`);
+    } else if (size < 1024 * 1024 * 1024) {
+      setCacheSize(`${(size / (1024 * 1024)).toFixed(1)} MB`);
+    } else {
+      setCacheSize(`${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchCacheSize();
+  }, []);
 
   const renderSettingRow = (
     label: string,
@@ -122,6 +142,7 @@ export default function SettingsScreen() {
                   { text: "取消", style: "cancel" },
                   { text: "确定", onPress: async () => {
                     await clearCache();
+                    await fetchCacheSize();
                     Alert.alert("已清除", "本地缓存已清空");
                   }}
                 ]
@@ -129,7 +150,9 @@ export default function SettingsScreen() {
             }}
           >
             <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>清除缓存</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>
+                清除缓存 ({cacheSize})
+              </Text>
               <Text style={[styles.settingDescription, { color: colors.secondary }]}>
                 释放本地存储空间
               </Text>

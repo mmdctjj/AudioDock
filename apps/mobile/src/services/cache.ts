@@ -33,22 +33,53 @@ export const isCached = async (trackId: number, originalPath: string): Promise<s
   }
 };
 
+const downloadPromises = new Map<number, Promise<string | null>>();
+
 /**
  * Download a track to the local cache
  */
 export const downloadTrack = async (trackId: number, url: string): Promise<string | null> => {
-  try {
-    await ensureCacheDirExists();
-    const localPath = getLocalPath(trackId, url);
-    const downloadRes = await FileSystem.downloadAsync(url, localPath);
-    if (downloadRes.status === 200) {
-      return localPath;
-    }
-    return null;
-  } catch (e) {
-    console.error(`Failed to download track ${trackId}`, e);
-    return null;
+  if (downloadPromises.has(trackId)) {
+    return downloadPromises.get(trackId)!;
   }
+
+  const downloadPromise = (async () => {
+    try {
+      await ensureCacheDirExists();
+      const localPath = getLocalPath(trackId, url);
+      
+      // Check if already exists to avoid redownloading
+      const fileInfo = await FileSystem.getInfoAsync(localPath);
+      if (fileInfo.exists) {
+        return localPath;
+      }
+
+      console.log(`[Cache] Starting download for track ${trackId}: ${url}`);
+      const downloadRes = await FileSystem.downloadAsync(url, localPath);
+      if (downloadRes.status === 200) {
+        console.log(`[Cache] Successfully downloaded track ${trackId} to ${localPath}`);
+        return localPath;
+      }
+      return null;
+    } catch (e) {
+      console.error(`[Cache] Failed to download track ${trackId}`, e);
+      return null;
+    } finally {
+      downloadPromises.delete(trackId);
+    }
+  })();
+
+  downloadPromises.set(trackId, downloadPromise);
+  return downloadPromise;
+};
+
+/**
+ * Format local path for TrackPlayer (ensuring file:// prefix)
+ */
+export const resolveLocalPath = (path: string): string => {
+  if (path.startsWith('file://')) return path;
+  if (path.startsWith('/')) return `file://${path}`;
+  return path;
 };
 
 /**
