@@ -2,16 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { deleteTrack } from "@soundx/services";
 import React from "react";
 import {
-  Alert,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Modal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../context/ThemeContext";
 import { Track } from "../models";
+import { downloadTrack } from "../services/downloadManager";
 
 interface TrackMoreModalProps {
   visible: boolean;
@@ -105,6 +106,22 @@ export const TrackMoreModal: React.FC<TrackMoreModalProps> = ({
           >
             <Ionicons name="information-circle-outline" size={24} color={colors.text} />
             <Text style={[styles.menuText, { color: colors.text }]}>属性</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={async () => {
+              onClose();
+              const success = await downloadTrack(track);
+              if (success) {
+                Alert.alert("下载成功", `“${track.name}”已下载到本地`);
+              } else {
+                Alert.alert("下载失败", "请稍后重试");
+              }
+            }}
+          >
+            <Ionicons name="cloud-download-outline" size={24} color={colors.text} />
+            <Text style={[styles.menuText, { color: colors.text }]}>下载</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

@@ -7,23 +7,25 @@ import { usePlayer } from "@/src/context/PlayerContext";
 import { useTheme } from "@/src/context/ThemeContext";
 import { getBaseURL } from "@/src/https";
 import { Album, Track } from "@/src/models";
+import { downloadTracks } from "@/src/services/downloadManager";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  getAlbumById,
-  getAlbumTracks,
-  toggleAlbumLike,
-  unlikeAlbum,
+    getAlbumById,
+    getAlbumTracks,
+    toggleAlbumLike,
+    unlikeAlbum,
 } from "@soundx/services";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function AlbumDetailScreen() {
@@ -226,6 +228,28 @@ export default function AlbumDetailScreen() {
                   color={isLiked ? colors.primary : colors.secondary}
                 />
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.likeButton, { backgroundColor: colors.card }]}
+                onPress={() => {
+                   if (tracks.length === 0) return;
+                   Alert.alert("批量下载", `确定要下载专辑《${album.name}》中的所有曲目吗？`, [
+                     { text: "取消", style: "cancel" },
+                     { text: "确定", onPress: () => {
+                        downloadTracks(tracks, (completed: number, total: number) => {
+                          if (completed === total) {
+                            Alert.alert("下载完成", `专辑《${album.name}》下载完成`);
+                          }
+                        });
+                     }}
+                   ]);
+                }}
+              >
+                <Ionicons
+                  name="cloud-download-outline"
+                  size={24}
+                  color={colors.secondary}
+                />
+              </TouchableOpacity>
             </View>
           </View>
         }
@@ -364,6 +388,7 @@ export default function AlbumDetailScreen() {
         visible={albumMoreVisible}
         album={album}
         trackIds={tracks.map((t) => t.id)}
+        tracks={tracks}
         onClose={() => setAlbumMoreVisible(false)}
         onAddToPlaylist={() => {
           setAlbumMoreVisible(false);

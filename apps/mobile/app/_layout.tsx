@@ -1,3 +1,4 @@
+import * as Linking from 'expo-linking';
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 import "react-native-reanimated";
@@ -19,30 +20,47 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
+  const url = Linking.useURL();
+
   useEffect(() => {
-    // AsyncStorage.clear();
+    // Handle deep link notification.click
+    if (url) {
+      const parsed = Linking.parse(url);
+      if (parsed.hostname === "notification.click" || parsed.path === "notification.click") {
+        router.replace("/player");
+        return;
+      }
+    }
+
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === "(tabs)";
+    const path = segments.join("/");
+
+    // Also check segments as fallback
+    if (path.includes("notification.click")) {
+      router.replace("/player");
+      return;
+    }
 
     // 排除 artist / album / modal 页面
     const isDetailPage =
-      (segments[0] as string) === "artist" ||
-      (segments[0] as string) === "album" ||
-      (segments[0] as string) === "modal" ||
-      (segments[0] as string) === "player" ||
-      (segments[0] as string) === "search" ||
-      (segments[0] as string) === "settings" ||
-      (segments[0] as string) === "playlist" ||
-      (segments[0] as string) === "folder" ||
-      (segments[0] as string) === "admin";
+      segments[0] === "artist" ||
+      segments[0] === "album" ||
+      segments[0] === "modal" ||
+      segments[0] === "player" ||
+      segments[0] === "search" ||
+      segments[0] === "settings" ||
+      segments[0] === "playlist" ||
+      segments[0] === "folder" ||
+      segments[0] === "admin";
 
     if (!token && inAuthGroup) {
       router.replace("/login");
     } else if (token && !inAuthGroup && !isDetailPage) {
       router.replace("/(tabs)");
     }
-  }, [token, segments, isLoading]);
+  }, [token, segments, isLoading, url]);
 
   return (
     <>

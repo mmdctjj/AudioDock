@@ -1,4 +1,5 @@
 import {
+  CloudDownloadOutlined,
   DeleteOutlined,
   HeartFilled,
   HeartOutlined,
@@ -27,6 +28,7 @@ import type { ColumnProps } from "antd/es/table";
 import React, { useState } from "react";
 import { useMessage } from "../../context/MessageContext";
 import { type Track, TrackType } from "../../models";
+import { downloadTrack } from "../../services/downloadManager";
 import { useAuthStore } from "../../store/auth";
 import { usePlayerStore } from "../../store/player";
 import { getCoverUrl } from "../../utils";
@@ -271,14 +273,9 @@ const TrackList: React.FC<TrackListProps> = ({
           {
             title: "专辑",
             dataIndex: ["album", "name"] as any, // Handle object or string based on backend?
-            // Actually record.album is usually string. But in some contexts it might be populated object?
-            // In Track model: album: string. 
-            // In Listened (History), item.album is Album object. item.track.album is string? 
-            // Let's check Track model.
             key: "album",
             ellipsis: true,
             render: (_: string, record: any) => {
-               // Defensive coding for different data shapes
                const albumName = typeof record.album === 'object' ? record.album?.name : record.album;
                return <Text type="secondary">{albumName}</Text>;
             },
@@ -373,6 +370,19 @@ const TrackList: React.FC<TrackListProps> = ({
                     info.domEvent.stopPropagation();
                     openAddToPlaylistModal(info.domEvent as any, record);
                   },
+                },
+                {
+                   key: "download",
+                   label: "下载",
+                   icon: <CloudDownloadOutlined />,
+                   onClick: (info) => {
+                     info.domEvent.stopPropagation();
+                     message.info(`正在下载 ${record.name}...`);
+                     downloadTrack(record).then(success => {
+                       if (success) message.success(`${record.name} 下载成功`);
+                       else message.error(`${record.name} 下载失败`);
+                     });
+                   }
                 },
                 {
                   key: "delete",

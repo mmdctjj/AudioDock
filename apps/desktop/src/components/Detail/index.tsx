@@ -1,17 +1,17 @@
 import {
-  CaretRightOutlined,
-  CloudDownloadOutlined,
-  HeartFilled,
-  HeartOutlined,
-  SearchOutlined,
-  SortAscendingOutlined,
-  SortDescendingOutlined,
+    CaretRightOutlined,
+    CloudDownloadOutlined,
+    HeartFilled,
+    HeartOutlined,
+    SearchOutlined,
+    SortAscendingOutlined,
+    SortDescendingOutlined,
 } from "@ant-design/icons";
 import {
-  getAlbumById,
-  getAlbumTracks,
-  toggleAlbumLike,
-  unlikeAlbum,
+    getAlbumById,
+    getAlbumTracks,
+    toggleAlbumLike,
+    unlikeAlbum,
 } from "@soundx/services";
 import { useRequest } from "ahooks";
 import { Avatar, Col, Flex, Input, Row, theme, Typography } from "antd";
@@ -19,6 +19,7 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMessage } from "../../context/MessageContext";
 import { type Album, type Track } from "../../models";
+import { downloadTracks } from "../../services/downloadManager";
 import { useAuthStore } from "../../store/auth";
 import { usePlayerStore } from "../../store/player";
 import { getCoverUrl } from "../../utils";
@@ -233,7 +234,21 @@ const Detail: React.FC = () => {
                       }
                     />
                   )}
-                  <CloudDownloadOutlined className={styles.actionIcon} />
+                  <CloudDownloadOutlined 
+                    className={styles.actionIcon} 
+                    onClick={() => {
+                        if (tracks.length === 0) {
+                            message.warning("无可下载的曲目");
+                            return;
+                        }
+                        message.info(`开始下载专辑《${album?.name}》`);
+                        downloadTracks(tracks, (completed: number, total: number) => {
+                            if (completed === total) {
+                                message.success(`专辑《${album?.name || ''}》下载完成`);
+                            }
+                        });
+                    }}
+                  />
                 </Typography.Text>
               </div>
 

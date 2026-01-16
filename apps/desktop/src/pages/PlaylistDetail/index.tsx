@@ -1,44 +1,46 @@
 import {
-  CaretRightOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  MoreOutlined,
-  PauseCircleFilled,
-  PlayCircleFilled,
-  PlusOutlined,
-  SearchOutlined,
-  SortAscendingOutlined,
-  SortDescendingOutlined
+    CaretRightOutlined,
+    CloudDownloadOutlined,
+    DeleteOutlined,
+    EditOutlined,
+    MoreOutlined,
+    PauseCircleFilled,
+    PlayCircleFilled,
+    PlusOutlined,
+    SearchOutlined,
+    SortAscendingOutlined,
+    SortDescendingOutlined
 } from "@ant-design/icons";
 import {
-  Col,
-  Dropdown,
-  Flex,
-  Form,
-  Input,
-  List,
-  Modal,
-  Popconfirm,
-  Row,
-  Table,
-  theme,
-  Typography,
-  type MenuProps,
+    addTrackToPlaylist,
+    deletePlaylist,
+    getPlaylistById,
+    getPlaylists,
+    removeTrackFromPlaylist,
+    updatePlaylist,
+    type Playlist,
+} from "@soundx/services";
+import {
+    Col,
+    Dropdown,
+    Flex,
+    Form,
+    Input,
+    List,
+    Modal,
+    Popconfirm,
+    Row,
+    Table,
+    theme,
+    Typography,
+    type MenuProps,
 } from "antd";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PlayingIndicator from "../../components/PlayingIndicator";
 import { useMessage } from "../../context/MessageContext";
 import { type Track } from "../../models";
-import {
-  addTrackToPlaylist,
-  deletePlaylist,
-  getPlaylistById,
-  getPlaylists,
-  removeTrackFromPlaylist,
-  updatePlaylist,
-  type Playlist,
-} from "@soundx/services";
+import { downloadTracks } from "../../services/downloadManager";
 import { useAuthStore } from "../../store/auth";
 import { usePlayerStore } from "../../store/player";
 import { getCoverUrl } from "../../utils";
@@ -421,6 +423,21 @@ const PlaylistDetail: React.FC = () => {
                   >
                     <DeleteOutlined className={styles.actionIcon} />
                   </Popconfirm>
+                  <CloudDownloadOutlined 
+                    className={styles.actionIcon} 
+                    onClick={() => {
+                        if (!playlist?.tracks || playlist.tracks.length === 0) {
+                            message.warning("无可下载的曲目");
+                            return;
+                        }
+                        message.info(`开始下载播放列表《${playlist?.name}》`);
+                        downloadTracks(playlist.tracks, (completed: number, total: number) => {
+                            if (completed === total) {
+                                message.success(`播放列表《${playlist?.name || ''}》下载完成`);
+                            }
+                        });
+                    }}
+                  />
                 </div>
               </div>
 

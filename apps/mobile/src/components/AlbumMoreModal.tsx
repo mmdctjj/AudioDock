@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { addTracksToPlaylist, createPlaylist } from "@soundx/services";
 import React from "react";
 import {
+    Alert,
     Modal,
     Pressable,
     StyleSheet,
@@ -12,12 +13,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { Album, TrackType } from "../models";
+import { Album, Track, TrackType } from "../models";
+import { downloadTracks } from "../services/downloadManager";
 
 interface AlbumMoreModalProps {
   visible: boolean;
   album: Album | null;
   trackIds: number[];
+  tracks: Track[];
   onClose: () => void;
   onAddToPlaylist: () => void;
 }
@@ -26,6 +29,7 @@ export const AlbumMoreModal: React.FC<AlbumMoreModalProps> = ({
   visible,
   album,
   trackIds,
+  tracks,
   onClose,
   onAddToPlaylist,
 }) => {
@@ -85,6 +89,27 @@ export const AlbumMoreModal: React.FC<AlbumMoreModalProps> = ({
             <TouchableOpacity style={styles.option} onPress={handleCreatePlaylistWithAlbum}>
               <Ionicons name="duplicate-outline" size={24} color={colors.text} />
               <Text style={[styles.optionText, { color: colors.text }]}>新建与专辑同名播放列表</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.option} 
+              onPress={() => {
+                onClose();
+                if (tracks.length === 0) return;
+                Alert.alert("批量下载", `确定要下载专辑《${album.name}》中的所有曲目吗？`, [
+                  { text: "取消", style: "cancel" },
+                  { text: "确定", onPress: () => {
+                    downloadTracks(tracks, (completed: number, total: number) => {
+                      if (completed === total) {
+                        Alert.alert("下载完成", `专辑《${album.name}》下载完成`);
+                      }
+                    });
+                  }}
+                ]);
+              }}
+            >
+              <Ionicons name="cloud-download-outline" size={24} color={colors.text} />
+              <Text style={[styles.optionText, { color: colors.text }]}>批量下载</Text>
             </TouchableOpacity>
           </View>
         </Pressable>

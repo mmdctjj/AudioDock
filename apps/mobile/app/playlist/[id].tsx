@@ -1,24 +1,26 @@
 import PlayingIndicator from "@/src/components/PlayingIndicator";
+import { TrackMoreModal } from "@/src/components/TrackMoreModal";
 import { usePlayer } from "@/src/context/PlayerContext";
 import { useTheme } from "@/src/context/ThemeContext";
 import { getBaseURL } from "@/src/https";
 import { Playlist } from "@/src/models";
+import { downloadTracks } from "@/src/services/downloadManager";
 import { Ionicons } from "@expo/vector-icons";
 import { deletePlaylist, getPlaylistById, updatePlaylist } from "@soundx/services";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  ViewStyle,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+    ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -33,6 +35,8 @@ export default function PlaylistDetailScreen() {
   const [renameModalVisible, setRenameModalVisible] = useState(false);
   const [newName, setNewName] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [trackMoreVisible, setTrackMoreVisible] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState<any>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -201,6 +205,10 @@ export default function PlaylistDetailScreen() {
               onPress={() => {
                 playTrackList(tracks, index);
               }}
+              onLongPress={() => {
+                setSelectedTrack(track);
+                setTrackMoreVisible(true);
+              }}
             >
               <View style={styles.trackIndexContainer}>
                 {currentTrack?.id === track.id && isPlaying ? (
@@ -246,6 +254,16 @@ export default function PlaylistDetailScreen() {
         </View>
       </ScrollView>
 
+      <TrackMoreModal
+        visible={trackMoreVisible}
+        track={selectedTrack}
+        onClose={() => setTrackMoreVisible(false)}
+        onAddToPlaylist={(track) => {
+          // Playlist detail already in a playlist, but user might want to add to another
+          // Just ignore for now or implement AddToPlaylistModal here too
+        }}
+      />
+
       {/* More Actions Menu */}
       <Modal
         visible={moreModalVisible}
@@ -259,6 +277,27 @@ export default function PlaylistDetailScreen() {
           onPress={() => setMoreModalVisible(false)}
         >
           <View style={[styles.menuContent, { backgroundColor: colors.card }]}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMoreModalVisible(false);
+                if (tracks.length === 0) return;
+                Alert.alert("批量下载", `确定要下载播放列表“${playlist.name}”中的所有曲目吗？`, [
+                  { text: "取消", style: "cancel" },
+                  { text: "确定", onPress: () => {
+                    downloadTracks(tracks, (completed: number, total: number) => {
+                      if (completed === total) {
+                        Alert.alert("下载完成", `播放列表“${playlist.name}”下载完成`);
+                      }
+                    });
+                  }}
+                ]);
+              }}
+            >
+              <Ionicons name="cloud-download-outline" size={20} color={colors.text} />
+              <Text style={[styles.menuText, { color: colors.text }]}>批量下载</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => {
