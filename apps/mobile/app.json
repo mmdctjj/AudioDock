@@ -2,7 +2,7 @@
   "expo": {
     "name": "AudioDock",
     "slug": "AudioDock 听见你的声音",
-    "version": "1.0.54",
+    "version": "1.0.55",
     "orientation": "default",
     "icon": "../../images/logo.png",
     "scheme": "audiodock",
