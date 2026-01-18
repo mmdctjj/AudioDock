@@ -43,14 +43,34 @@ const parseLyrics = (lyrics: string): LyricLine[] => {
   const parsed: LyricLine[] = [];
 
   for (const line of lines) {
-    // Match LRC format: [mm:ss.xx] or [mm:ss] text
-    const match = line.match(/\[(\d+):(\d+)(?:\.(\d+))?\](.*)/);
+    // Match LRC format: [mm:ss.xx], [mm:ss], [hh:mm:ss]
+    // Group 1: Part 1 (mm or hh)
+    // Group 2: Part 2 (ss or mm)
+    // Group 3: Separator (. or :)
+    // Group 4: Part 3 (xx or ss)
+    // Group 5: Text
+    const match = line.match(/\[(\d+):(\d+)(?:([\.:])(\d+))?\](.*)/);
     if (match) {
-      const minutes = parseInt(match[1]);
-      const seconds = parseInt(match[2]);
-      const milliseconds = match[3] ? parseInt(match[3].padEnd(3, "0")) : 0;
-      const time = minutes * 60 + seconds + milliseconds / 1000;
-      const text = match[4].trim();
+      const part1 = parseInt(match[1]);
+      const part2 = parseInt(match[2]);
+      const separator = match[3];
+      const part3Str = match[4];
+      const text = match[5].trim();
+
+      let time = 0;
+      // If separator is ':' and we have 3 parts, assume hh:mm:ss
+      if (separator === ":" && part3Str) {
+        const hours = part1;
+        const minutes = part2;
+        const seconds = parseInt(part3Str);
+        time = hours * 3600 + minutes * 60 + seconds;
+      } else {
+        // Assume mm:ss.xx or mm:ss
+        const minutes = part1;
+        const seconds = part2;
+        const milliseconds = part3Str ? parseInt(part3Str.padEnd(3, "0")) : 0;
+        time = minutes * 60 + seconds + milliseconds / 1000;
+      }
 
       if (text) {
         parsed.push({ time, text });
@@ -60,7 +80,6 @@ const parseLyrics = (lyrics: string): LyricLine[] => {
       parsed.push({ time: 0, text: line.trim() });
     }
   }
-
   return parsed.sort((a, b) => a.time - b.time);
 };
 

@@ -30,8 +30,12 @@ const Lyrics: React.FC<LyricsProps> = ({ lyrics, currentTime }) => {
 
     const lines = lyrics.split(/\r?\n/);
     const parsed: LyricLine[] = [];
-    // Regex to match all timestamps in a line: [mm:ss.xx] or [mm:ss.xxx]
-    const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/g;
+    // Regex to match all timestamps in a line: [mm:ss.xx], [mm:ss:xx], or [mm:ss]
+    // Group 1: Part 1 (mm or hh)
+    // Group 2: Part 2 (ss or mm)
+    // Group 3: Separator (. or :)
+    // Group 4: Part 3 (xx or ss)
+    const timeRegex = /\[(\d+):(\d+)(?:([\.:])(\d+))?\]/g;
 
     lines.forEach((line) => {
       const matches = [...line.matchAll(timeRegex)];
@@ -39,10 +43,26 @@ const Lyrics: React.FC<LyricsProps> = ({ lyrics, currentTime }) => {
         const text = line.replace(timeRegex, "").trim();
         if (text) {
           matches.forEach((match) => {
-            const minutes = parseInt(match[1], 10);
-            const seconds = parseInt(match[2], 10);
-            const milliseconds = parseInt(match[3], 10);
-            const time = minutes * 60 + seconds + milliseconds / 1000;
+            const part1 = parseInt(match[1], 10);
+            const part2 = parseInt(match[2], 10);
+            const separator = match[3];
+            const part3Str = match[4];
+
+            let time = 0;
+            if (separator === ":" && part3Str) {
+              const hours = part1;
+              const minutes = part2;
+              const seconds = parseInt(part3Str, 10);
+              time = hours * 3600 + minutes * 60 + seconds;
+            } else {
+              const minutes = part1;
+              const seconds = part2;
+              const milliseconds = part3Str
+                ? parseInt(part3Str.padEnd(3, "0"), 10)
+                : 0;
+              time = minutes * 60 + seconds + milliseconds / 1000;
+            }
+            
             parsed.push({ time, text });
           });
         }
