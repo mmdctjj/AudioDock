@@ -54,10 +54,12 @@ export class AlbumController {
   @Get('/album/collaborative/:artist')
   @LogMethod()
   async getCollaborativeAlbumsByArtist(
+    @Req() req: Request,
     @Param('artist') artist: string,
   ): Promise<ISuccessResponse<Album[]> | IErrorResponse> {
     try {
-      const albumList = await this.albumService.getCollaborativeAlbumsByArtist(artist);
+      const userId = (req.user as any)?.userId;
+      const albumList = await this.albumService.getCollaborativeAlbumsByArtist(artist, Number(userId));
       return {
         code: 200,
         message: 'success',
@@ -74,10 +76,12 @@ export class AlbumController {
   @Get('/album/artist/:artist')
   @LogMethod()
   async getAlbumsByArtist(
+    @Req() req: Request,
     @Param('artist') artist: string,
   ): Promise<ISuccessResponse<Album[]> | IErrorResponse> {
     try {
-      const albumList = await this.albumService.getAlbumsByArtist(artist);
+      const userId = (req.user as any)?.userId;
+      const albumList = await this.albumService.getAlbumsByArtist(artist, Number(userId));
       return {
         code: 200,
         message: 'success',

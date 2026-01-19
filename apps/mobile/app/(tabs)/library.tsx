@@ -5,14 +5,14 @@ import { getArtistList, loadMoreAlbum } from "@soundx/services";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    SectionList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  Image,
+  SectionList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../src/context/ThemeContext";
@@ -46,7 +46,7 @@ const ArtistList = () => {
   const availableWidth = width - SCREEN_PADDING;
   const numColumns = Math.max(
     3, // Min 3 columns for better density
-    Math.floor((availableWidth + GAP) / (TARGET_WIDTH + GAP))
+    Math.floor((availableWidth + GAP) / (TARGET_WIDTH + GAP)),
   );
   const itemWidth = (availableWidth - (numColumns - 1) * GAP) / numColumns;
 
@@ -63,13 +63,13 @@ const ArtistList = () => {
       if (res.code === 200 && res.data) {
         const { list } = res.data;
         const grouped = groupAndSort(list, (item) => item.name);
-        
+
         // Chunk data for grid layout within sections
-        const gridSections: any[] = grouped.map(section => ({
+        const gridSections: any[] = grouped.map((section) => ({
           ...section,
-          data: chunkArray(section.data, numColumns)
+          data: chunkArray(section.data, numColumns),
         }));
-        
+
         setSections(gridSections);
       }
     } catch (error) {
@@ -109,8 +109,15 @@ const ArtistList = () => {
         contentContainerStyle={styles.listContent}
         keyExtractor={(item, index) => `row-${index}`}
         renderSectionHeader={({ section: { title } }) => (
-          <View style={[styles.sectionHeader, { backgroundColor: colors.background }]}>
-            <Text style={[styles.sectionHeaderText, { color: colors.primary }]}>{title}</Text>
+          <View
+            style={[
+              styles.sectionHeader,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <Text style={[styles.sectionHeaderText, { color: colors.primary }]}>
+              {title}
+            </Text>
           </View>
         )}
         renderItem={({ item: rowItems }) => (
@@ -136,7 +143,10 @@ const ArtistList = () => {
                     },
                   ]}
                 />
-                <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+                <Text
+                  style={[styles.name, { color: colors.text }]}
+                  numberOfLines={1}
+                >
                   {item.name}
                 </Text>
               </TouchableOpacity>
@@ -153,8 +163,8 @@ const ArtistList = () => {
         removeClippedSubviews={false} // Setting to false often fixes bounce in grid layouts
         stickySectionHeadersEnabled={false} // Sticky headers can cause jumpy behavior on some RN versions
       />
-      <AlphabetSidebar 
-        sections={sections.map(s => s.title)} 
+      <AlphabetSidebar
+        sections={sections.map((s) => s.title)}
         onSelect={(section, index) => handleScrollToSection(index)}
       />
     </View>
@@ -174,7 +184,7 @@ const AlbumList = () => {
   const availableWidth = width - SCREEN_PADDING;
   const numColumns = Math.max(
     3,
-    Math.floor((availableWidth + GAP) / (TARGET_WIDTH + GAP))
+    Math.floor((availableWidth + GAP) / (TARGET_WIDTH + GAP)),
   );
   const itemWidth = (availableWidth - (numColumns - 1) * GAP) / numColumns;
 
@@ -194,13 +204,13 @@ const AlbumList = () => {
       if (res.code === 200 && res.data) {
         const { list } = res.data;
         const grouped = groupAndSort(list, (item) => item.name);
-        
-         // Chunk data for grid layout within sections
-         const gridSections: any[] = grouped.map(section => ({
+
+        // Chunk data for grid layout within sections
+        const gridSections: any[] = grouped.map((section) => ({
           ...section,
-          data: chunkArray(section.data, numColumns)
+          data: chunkArray(section.data, numColumns),
         }));
-        
+
         setSections(gridSections);
       }
     } catch (error) {
@@ -240,8 +250,15 @@ const AlbumList = () => {
         contentContainerStyle={styles.listContent}
         keyExtractor={(item, index) => `row-${index}`}
         renderSectionHeader={({ section: { title } }) => (
-          <View style={[styles.sectionHeader, { backgroundColor: colors.background }]}>
-            <Text style={[styles.sectionHeaderText, { color: colors.primary }]}>{title}</Text>
+          <View
+            style={[
+              styles.sectionHeader,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <Text style={[styles.sectionHeaderText, { color: colors.primary }]}>
+              {title}
+            </Text>
           </View>
         )}
         renderItem={({ item: rowItems }) => (
@@ -252,21 +269,42 @@ const AlbumList = () => {
                 style={{ width: itemWidth }}
                 onPress={() => router.push(`/album/${item.id}`)}
               >
-                <Image
-                  source={{
-                    uri: item.cover
-                      ? `${getBaseURL()}${item.cover}`
-                      : `https://picsum.photos/seed/${item.id}/200/200`,
-                  }}
+                <View
                   style={[
-                    styles.albumImage,
-                    {
-                      width: itemWidth,
-                      height: itemWidth,
-                      backgroundColor: colors.card,
-                    },
+                    styles.albumImageContainer,
+                    { width: itemWidth, height: itemWidth },
                   ]}
-                />
+                >
+                  <Image
+                    source={{
+                      uri: item.cover
+                        ? `${getBaseURL()}${item.cover}`
+                        : `https://picsum.photos/seed/${item.id}/200/200`,
+                    }}
+                    style={[
+                      styles.albumImage,
+                      {
+                        width: itemWidth,
+                        height: itemWidth,
+                        backgroundColor: colors.card,
+                      },
+                    ]}
+                  />
+                  {(item.type === "AUDIOBOOK" || mode === "AUDIOBOOK") &&
+                    (item as any).progress > 0 && (
+                      <View style={styles.progressOverlay}>
+                        <View
+                          style={[
+                            styles.progressBar,
+                            {
+                              width: `${item.progress || 0}%`,
+                              backgroundColor: colors.primary,
+                            },
+                          ]}
+                        />
+                      </View>
+                    )}
+                </View>
                 <Text
                   style={[styles.albumTitle, { color: colors.text }]}
                   numberOfLines={1}
@@ -293,8 +331,8 @@ const AlbumList = () => {
         removeClippedSubviews={false}
         stickySectionHeadersEnabled={false}
       />
-      <AlphabetSidebar 
-        sections={sections.map(s => s.title)} 
+      <AlphabetSidebar
+        sections={sections.map((s) => s.title)}
         onSelect={(section, index) => handleScrollToSection(index)}
       />
     </View>
@@ -320,7 +358,10 @@ export default function LibraryScreen() {
         <View style={styles.headerRight}>
           <TouchableOpacity
             onPress={() => router.push("/folder" as any)}
-            style={[styles.iconButton, { backgroundColor: colors.card, marginRight: 12 }]}
+            style={[
+              styles.iconButton,
+              { backgroundColor: colors.card, marginRight: 12 },
+            ]}
           >
             <Ionicons name="folder-outline" size={20} color={colors.primary} />
           </TouchableOpacity>
@@ -332,7 +373,10 @@ export default function LibraryScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setMode(mode === "MUSIC" ? "AUDIOBOOK" : "MUSIC")}
-            style={[styles.iconButton, { backgroundColor: colors.card, marginLeft: 12 }]}
+            style={[
+              styles.iconButton,
+              { backgroundColor: colors.card, marginLeft: 12 },
+            ]}
           >
             <Ionicons
               name={mode === "MUSIC" ? "musical-notes" : "headset"}
@@ -362,7 +406,9 @@ export default function LibraryScreen() {
                 styles.segmentText,
                 {
                   color:
-                    activeTab === "artists" ? colors.background : colors.secondary,
+                    activeTab === "artists"
+                      ? colors.background
+                      : colors.secondary,
                 },
               ]}
             >
@@ -381,7 +427,9 @@ export default function LibraryScreen() {
                 styles.segmentText,
                 {
                   color:
-                    activeTab === "albums" ? colors.background : colors.secondary,
+                    activeTab === "albums"
+                      ? colors.background
+                      : colors.secondary,
                 },
               ]}
             >
@@ -402,7 +450,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   tabContent: {
     paddingHorizontal: 20,
@@ -458,10 +506,10 @@ const styles = StyleSheet.create({
   },
   sectionHeaderText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 15,
   },
   // Removed fixed Width styles
@@ -476,10 +524,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#333",
   },
-  albumImage: {
+  albumImageContainer: {
     borderRadius: 15,
+    overflow: "hidden",
+    position: "relative",
     marginBottom: 8,
+  },
+  albumImage: {
     backgroundColor: "#f0f0f0",
+  },
+  progressOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  },
+  progressBar: {
+    height: "100%",
   },
   albumTitle: {
     fontSize: 14,

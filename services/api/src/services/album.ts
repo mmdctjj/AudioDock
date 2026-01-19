@@ -30,11 +30,20 @@ export class AlbumService {
     return await this.prisma.album.findFirst({ where });
   }
 
-  async getAlbumsByArtist(artist: string): Promise<Album[]> {
-    return await this.prisma.album.findMany({ where: { artist } });
+  async getAlbumsByArtist(artist: string, userId?: number): Promise<Album[]> {
+    const list = await this.prisma.album.findMany({ where: { artist } });
+    if (userId) {
+      const audiobookAlbums = list.filter(a => a.type === 'AUDIOBOOK');
+      const musicAlbums = list.filter(a => a.type !== 'AUDIOBOOK');
+      if (audiobookAlbums.length > 0) {
+        const enriched = await this.attachProgressToAlbums(audiobookAlbums, userId);
+        return [...musicAlbums, ...enriched].sort((a, b) => b.id - a.id);
+      }
+    }
+    return list;
   }
 
-  async getCollaborativeAlbumsByArtist(artistName: string): Promise<Album[]> {
+  async getCollaborativeAlbumsByArtist(artistName: string, userId?: number): Promise<Album[]> {
     // 1. Fetch albums where the artist field contains the artistName but is not an exact match
     const candidates = await this.prisma.album.findMany({
       where: {
@@ -48,11 +57,22 @@ export class AlbumService {
 
     // 2. Filter in memory to ensure it's a valid collaboration split by delimiters
     const delimiters = /[&/、, \s]+/; 
-    return candidates.filter(album => {
+    const list = candidates.filter(album => {
       const artists = album.artist.split(delimiters).map(a => a.trim());
       // Check for exact match within the split artists
       return artists.includes(artistName);
     });
+
+    if (userId) {
+      const audiobookAlbums = list.filter(a => a.type === 'AUDIOBOOK');
+      const musicAlbums = list.filter(a => a.type !== 'AUDIOBOOK');
+      if (audiobookAlbums.length > 0) {
+        const enriched = await this.attachProgressToAlbums(audiobookAlbums, userId);
+        return [...musicAlbums, ...enriched].sort((a, b) => b.id - a.id);
+      }
+    }
+
+    return list;
   }
 
   async getAlbumById(id: number, userId?: number): Promise<Album | null> {

@@ -419,14 +419,21 @@ export default function HomeScreen() {
                           router.push(`/album/${item.id}`);
                         }}
                       >
-                        <Image
-                          source={{
-                            uri: item.cover
-                              ? `${getBaseURL()}${item.cover}`
-                              : `https://picsum.photos/seed/${item.id}/200/200`,
-                          }}
-                          style={styles.albumImage}
-                        />
+                        <View style={styles.albumImageContainer}>
+                          <Image
+                            source={{
+                              uri: item.cover
+                                ? `${getBaseURL()}${item.cover}`
+                                : `https://picsum.photos/seed/${item.id}/200/200`,
+                            }}
+                            style={styles.albumImage}
+                          />
+                          {(item.type === "AUDIOBOOK" || mode === "AUDIOBOOK") && (item as any).progress > 0 && (
+                            <View style={styles.progressOverlay}>
+                              <View style={[styles.progressBar, { width: `${item.progress}%`, backgroundColor: colors.primary }]} />
+                            </View>
+                          )}
+                        </View>
                         <Text
                           style={[styles.albumTitle, { color: colors.text }]}
                           numberOfLines={1}
@@ -548,11 +555,28 @@ const styles = StyleSheet.create({
     marginRight: 15,
     width: 120,
   },
+  albumImageContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 8,
+  },
   albumImage: {
     width: 120,
     height: 120,
-    borderRadius: 15,
-    marginBottom: 8,
+  },
+  progressOverlay: {
+    position: 'absolute',
+    bottom: 3,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  progressBar: {
+    height: '100%',
   },
   albumTitle: {
     fontSize: 14,

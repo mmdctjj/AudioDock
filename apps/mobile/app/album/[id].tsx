@@ -250,14 +250,29 @@ export default function AlbumDetailScreen() {
         keyExtractor={(item) => item.id.toString()}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Image
-              source={{
-                uri: album.cover
-                  ? `${getBaseURL()}${album.cover}`
-                  : `https://picsum.photos/seed/${album.id}/300/300`,
-              }}
-              style={styles.cover}
-            />
+            <View style={styles.coverContainer}>
+              <Image
+                source={{
+                  uri: album.cover
+                    ? `${getBaseURL()}${album.cover}`
+                    : `https://picsum.photos/seed/${album.id}/300/300`,
+                }}
+                style={styles.cover}
+              />
+              {album.type === "AUDIOBOOK" && (album as any).progress > 0 && (
+                <View style={styles.progressOverlay}>
+                  <View
+                    style={[
+                      styles.progressBar,
+                      {
+                        width: `${album.progress || 0}%`,
+                        backgroundColor: colors.primary,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
+            </View>
             <Text style={[styles.title, { color: colors.text }]}>
               {album.name}
             </Text>
@@ -550,11 +565,28 @@ const styles = StyleSheet.create({
   moreButton: {
     padding: 5,
   },
-  cover: {
+  coverContainer: {
     width: 200,
     height: 200,
     borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
     marginBottom: 15,
+  },
+  cover: {
+    width: '100%',
+    height: '100%',
+  },
+  progressOverlay: {
+    position: 'absolute',
+    bottom: 5,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  progressBar: {
+    height: '100%',
   },
   title: {
     fontSize: 24,

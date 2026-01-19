@@ -7,7 +7,12 @@ import { getBaseURL } from "@/src/https";
 import { Album, Artist, Track, TrackType } from "@/src/models";
 import { usePlayMode } from "@/src/utils/playMode";
 import { Ionicons } from "@expo/vector-icons";
-import { getAlbumsByArtist, getArtistById, getCollaborativeAlbumsByArtist, getTracksByArtist } from "@soundx/services";
+import {
+  getAlbumsByArtist,
+  getArtistById,
+  getCollaborativeAlbumsByArtist,
+  getTracksByArtist,
+} from "@soundx/services";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -56,7 +61,8 @@ export default function ArtistDetailScreen() {
             getTracksByArtist(artistRes.data.name),
           ]);
           if (albumsRes.code === 200) setAlbums(albumsRes.data);
-          if (collaborativeRes.code === 200) setCollaborativeAlbums(collaborativeRes.data);
+          if (collaborativeRes.code === 200)
+            setCollaborativeAlbums(collaborativeRes.data);
           if (tracksRes.code === 200) setTracks(tracksRes.data);
         }
       }
@@ -121,24 +127,49 @@ export default function ArtistDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text, paddingHorizontal: 20 }]}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: colors.text, paddingHorizontal: 20 },
+            ]}
+          >
             所有专辑 ({albums.length})
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          >
             {albums.map((album) => (
               <TouchableOpacity
                 key={album.id}
                 style={styles.albumCard}
                 onPress={() => router.push(`/album/${album.id}`)}
               >
-                <Image
-                  source={{
-                    uri: album.cover
-                      ? `${getBaseURL()}${album.cover}`
-                      : `https://picsum.photos/seed/${album.id}/200/200`,
-                  }}
-                  style={styles.albumCover}
-                />
+                <View style={styles.albumCoverContainer}>
+                  <Image
+                    source={{
+                      uri: album.cover
+                        ? `${getBaseURL()}${album.cover}`
+                        : `https://picsum.photos/seed/${album.id}/200/200`,
+                    }}
+                    style={styles.albumCover}
+                  />
+                  {(album.type === "AUDIOBOOK") &&
+                    (album as any).progress > 0 && (
+                      <View style={styles.progressOverlay}>
+                        <View
+                          style={[
+                            styles.progressBar,
+                            {
+                              width: `${album.progress || 0}%`,
+                              backgroundColor: colors.primary,
+                            },
+                          ]}
+                        />
+                      </View>
+                    )}
+                </View>
                 <Text
                   style={[styles.albumName, { color: colors.text }]}
                   numberOfLines={1}
@@ -152,24 +183,50 @@ export default function ArtistDetailScreen() {
 
         {collaborativeAlbums.length > 0 && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text, paddingHorizontal: 20 }]}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: colors.text, paddingHorizontal: 20 },
+              ]}
+            >
               合作专辑 ({collaborativeAlbums.length})
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ paddingHorizontal: 20, paddingBottom: 20 }}
+            >
               {collaborativeAlbums.map((album) => (
                 <TouchableOpacity
                   key={album.id}
                   style={styles.albumCard}
                   onPress={() => router.push(`/album/${album.id}`)}
                 >
-                  <Image
-                    source={{
-                      uri: album.cover
-                        ? `${getBaseURL()}${album.cover}`
-                        : `https://picsum.photos/seed/${album.id}/200/200`,
-                    }}
-                    style={styles.albumCover}
-                  />
+                  <View style={styles.albumCoverContainer}>
+                    <Image
+                      source={{
+                        uri: album.cover
+                          ? `${getBaseURL()}${album.cover}`
+                          : `https://picsum.photos/seed/${album.id}/200/200`,
+                      }}
+                      style={styles.albumCover}
+                    />
+                    {(album.type === "AUDIOBOOK" ||
+                      artist.type === "AUDIOBOOK") &&
+                      (album as any).progress > 0 && (
+                        <View style={styles.progressOverlay}>
+                          <View
+                            style={[
+                              styles.progressBar,
+                              {
+                                width: `${album.progress || 0}%`,
+                                backgroundColor: colors.primary,
+                              },
+                            ]}
+                          />
+                        </View>
+                      )}
+                  </View>
                   <Text
                     style={[styles.albumName, { color: colors.text }]}
                     numberOfLines={1}
@@ -185,7 +242,12 @@ export default function ArtistDetailScreen() {
         {mode !== TrackType.AUDIOBOOK && (
           <View style={[styles.section, styles.trackList]}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: colors.text, marginBottom: 0 },
+                ]}
+              >
                 所有单曲 ({tracks.length})
               </Text>
               <TouchableOpacity
@@ -211,7 +273,17 @@ export default function ArtistDetailScreen() {
                   {currentTrack?.id === track.id && isPlaying ? (
                     <PlayingIndicator />
                   ) : (
-                    <Text style={[styles.trackIndex, { color: currentTrack?.id === track.id ? colors.primary : colors.secondary }]}>
+                    <Text
+                      style={[
+                        styles.trackIndex,
+                        {
+                          color:
+                            currentTrack?.id === track.id
+                              ? colors.primary
+                              : colors.secondary,
+                        },
+                      ]}
+                    >
                       {index + 1}
                     </Text>
                   )}
@@ -233,7 +305,9 @@ export default function ArtistDetailScreen() {
                     {track.name}
                   </Text>
                 </View>
-                <Text style={[styles.trackDuration, { color: colors.secondary }]}>
+                <Text
+                  style={[styles.trackDuration, { color: colors.secondary }]}
+                >
                   {track.duration
                     ? `${Math.floor(track.duration / 60)}:${(track.duration % 60).toString().padStart(2, "0")}`
                     : "--:--"}
@@ -324,11 +398,28 @@ const styles = StyleSheet.create({
     marginRight: 15,
     width: 120,
   },
-  albumCover: {
+  albumCoverContainer: {
     width: 120,
     height: 120,
     borderRadius: 10,
+    overflow: "hidden",
+    position: "relative",
     marginBottom: 5,
+  },
+  albumCover: {
+    width: 120,
+    height: 120,
+  },
+  progressOverlay: {
+    position: "absolute",
+    bottom: 5,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  },
+  progressBar: {
+    height: "100%",
   },
   albumName: {
     fontSize: 14,
@@ -342,12 +433,12 @@ const styles = StyleSheet.create({
   },
   trackIndex: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   trackIndexContainer: {
     width: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   trackInfo: {
     flex: 1,
