@@ -2,7 +2,7 @@
   "expo": {
     "name": "AudioDock",
     "slug": "AudioDock 听见你的声音",
-    "version": "1.0.59",
+    "version": "1.0.60",
     "orientation": "default",
     "icon": "../../images/logo.png",
     "scheme": "audiodock",
@@ -34,7 +34,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "permissions": [
-        "REQUEST_INSTALL_PACKAGES", 
+        "REQUEST_INSTALL_PACKAGES",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "INTERNET"
