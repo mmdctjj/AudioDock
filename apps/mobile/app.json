@@ -8,6 +8,11 @@
     "scheme": "audiodock",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff" 
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.soundx.mobile.dev",
@@ -53,18 +58,6 @@
     "plugins": [
       "./scripts/withNetworkSecurityConfig.js",
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#aaaaaa"
-          }
-        }
-      ],
       [
         "expo-build-properties",
         {
