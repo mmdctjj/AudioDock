@@ -97,9 +97,15 @@ export default function PersonalScreen() {
   const { playTrackList } = usePlayer();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { checkUpdate, progress } = useCheckUpdate();
+  const { checkUpdate, progress, updateInfo, startUpdate, ignoreUpdate, cancelUpdate } = useCheckUpdate();
 
   const [isModalVisible, setModalVisible] = useState(false);
+
+  useEffect(() => {
+    if (updateInfo) {
+      setModalVisible(true);
+    }
+  }, [updateInfo]);
 
   const [activeTab, setActiveTab] = useState<TabType>("playlists");
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>("track");
@@ -720,7 +726,21 @@ export default function PersonalScreen() {
         />
       )}
 
-      <UpdateModal visible={isModalVisible} progress={progress} onBackground={() => setModalVisible(false)} />
+      <UpdateModal 
+        visible={isModalVisible} 
+        progress={progress} 
+        updateInfo={updateInfo}
+        onBackground={() => setModalVisible(false)} 
+        onUpdate={startUpdate}
+        onIgnore={() => {
+          ignoreUpdate();
+          setModalVisible(false);
+        }}
+        onCancel={() => {
+          cancelUpdate();
+          setModalVisible(false);
+        }}
+      />
 
       <Modal
         visible={createModalVisible}

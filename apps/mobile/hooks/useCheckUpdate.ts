@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import { compareVersions, downloadAndInstallApk, getLocalVersion } from '../src/utils/updateUtils';
@@ -6,9 +7,16 @@ const GITHUB_USER = 'mmdctjj';
 const GITHUB_REPO = 'AudioDock';
 const USE_GHPROXY = true; // 开启加速
 
+export interface UpdateInfo {
+  version: string;
+  body: string;
+  downloadUrl: string;
+}
+
 export const useCheckUpdate = () => {
   // UI 状态
   const [progress, setProgress] = useState(0);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
   const checkUpdate = async () => {
     if (Platform.OS !== 'android') return;
@@ -28,6 +36,13 @@ export const useCheckUpdate = () => {
 
       console.log(`本地: ${localVersion}, 线上: ${remoteVersion}`);
 
+      // Check ignore
+      const ignoredVersion = await AsyncStorage.getItem("ignored_version");
+      if (remoteVersion === ignoredVersion) {
+        console.log(`Version ${remoteVersion} is ignored.`);
+        return;
+      }
+
       // 3. 比对版本
       if (compareVersions(remoteVersion, localVersion) === 1) {
 
@@ -39,22 +54,37 @@ export const useCheckUpdate = () => {
           downloadUrl = `https://mirror.ghproxy.com/${downloadUrl}`;
         }
 
-        // 4. 弹出确认框
-        Alert.alert(
-          `发现新版本 ${remoteVersion}`,
-          data.body || '建议立即更新体验新功能',
-          [
-            { text: '下次再说', style: 'cancel' },
-            {
-              text: '立即更新',
-              onPress: () => startDownload(downloadUrl) // 点击后开始下载
-            }
-          ]
-        );
+        // 4. 设置更新信息，不再弹出 Alert
+        setUpdateInfo({
+          version: remoteVersion,
+          body: data.body || '建议立即更新体验新功能',
+          downloadUrl: downloadUrl
+        });
       }
     } catch (error) {
       console.error('检查更新失败', error);
     }
+  };
+
+  const startUpdate = () => {
+    if (updateInfo) {
+      startDownload(updateInfo.downloadUrl);
+      // Keep updateInfo to show progress in the same modal context if needed, 
+      // or we can rely on progress > 0.
+      // But typically we might want to hide the "Prompt" part. 
+      // setUpdateInfo(null); // Do not clear yet if we want to use the info for title etc.
+    }
+  };
+
+  const ignoreUpdate = async () => {
+    if (updateInfo) {
+      await AsyncStorage.setItem("ignored_version", updateInfo.version);
+      setUpdateInfo(null);
+    }
+  };
+
+  const cancelUpdate = () => {
+    setUpdateInfo(null);
   };
 
   // 内部函数：处理下载流程
@@ -73,6 +103,10 @@ export const useCheckUpdate = () => {
   // 返回：触发函数 + UI组件
   return {
     checkUpdate,
-    progress
+    progress,
+    updateInfo,
+    startUpdate,
+    ignoreUpdate,
+    cancelUpdate
   };
 };
