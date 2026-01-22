@@ -47,15 +47,16 @@ export class SubsonicAlbumAdapter implements IAlbumAdapter {
     type?: string;
   }) {
     const offset = 0; // Assuming loadCount is total items loaded so far? Or offset?
-    const res = await this.client.get<SubsonicAlbumList>("getAlbumList2", { type: "newest", size: 1000000, offset });
-    const list = (res.albumList?.album || []).map(a => mapSubsonicAlbumToAlbum(a, (id) => this.client.getCoverUrl(id)));
+    const res = await this.client.get<SubsonicAlbumList>("getAlbumList2", { type: "alphabeticalByName", size: 1000000, offset });
+    console.log("res", res);
+    const list = (res.albumList2?.album || []).map(a => mapSubsonicAlbumToAlbum(a, (id) => this.client.getCoverUrl(id)));
     
     return this.response({
         pageSize: params.pageSize,
         loadCount: params.loadCount + list.length,
         list,
         total: list.length,
-        hasMore: list.length === params.pageSize
+        hasMore: false
     });
   }
 
@@ -63,11 +64,11 @@ export class SubsonicAlbumAdapter implements IAlbumAdapter {
      throw new Error("Create Album not supported");
   }
 
-  async updateAlbum(id: number, data: Partial<Album>): Promise<ISuccessResponse<Album>> {
+  async updateAlbum(id: number | string, data: Partial<Album>): Promise<ISuccessResponse<Album>> {
     throw new Error("Update Album not supported");
   }
 
-  async deleteAlbum(id: number): Promise<ISuccessResponse<boolean>> {
+  async deleteAlbum(id: number | string): Promise<ISuccessResponse<boolean>> {
     throw new Error("Delete Album not supported");
   }
 
@@ -75,7 +76,7 @@ export class SubsonicAlbumAdapter implements IAlbumAdapter {
     throw new Error("Batch Create Album not supported");
   }
 
-  async batchDeleteAlbums(ids: number[]): Promise<ISuccessResponse<boolean>> {
+  async batchDeleteAlbums(ids: (number | string)[]): Promise<ISuccessResponse<boolean>> {
     throw new Error("Batch Delete Album not supported");
   }
 
@@ -92,18 +93,18 @@ export class SubsonicAlbumAdapter implements IAlbumAdapter {
     return this.response(list);
   }
 
-  async getAlbumById(id: number) {
+  async getAlbumById(id: number | string) {
     const res = await this.client.get<SubsonicAlbumInfo>("getAlbum", { id: id.toString() });
     return this.response(mapSubsonicAlbumToAlbum(res.album, (id) => this.client.getCoverUrl(id)));
   }
 
   async getAlbumTracks(
-    id: number,
+    id: number | string,
     pageSize: number,
     skip: number,
     sort: "asc" | "desc" = "asc",
     keyword?: string,
-    userId?: number,
+    userId?: number | string,
   ) {
       // getAlbum returns tracks inside it.
     const res = await this.client.get<SubsonicAlbumInfo>("getAlbum", { id: id.toString() });
@@ -150,5 +151,31 @@ export class SubsonicAlbumAdapter implements IAlbumAdapter {
 
   async getCollaborativeAlbumsByArtist(artist: string) {
      return this.response([]);
+  }
+
+  async toggleLike(id: number | string, userId: number | string) {
+    await this.client.get("star", { albumId: id.toString() });
+    return this.response(null);
+  }
+
+  async toggleUnLike(id: number | string, userId: number | string) {
+    await this.client.get("unstar", { albumId: id.toString() });
+    return this.response(null);
+  }
+
+  async getFavoriteAlbums(userId: number | string, loadCount: number, pageSize: number, type?: string) {
+    const res = await this.client.get<SubsonicAlbumList>("getAlbumList2", { type: "starred", size: pageSize, offset: loadCount });
+    const albums = res.albumList2?.album || res.albumList?.album || [];
+    const list = albums.map(a => ({
+        album: mapSubsonicAlbumToAlbum(a, (id) => this.client.getCoverUrl(id)),
+        createdAt: a.starred || a.created || new Date().toISOString()
+    }));
+    return this.response({
+        pageSize,
+        loadCount: loadCount + list.length,
+        list,
+        total: 1000,
+        hasMore: list.length === pageSize
+    });
   }
 }

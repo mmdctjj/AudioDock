@@ -7,8 +7,10 @@ import {
     searchAlbums,
     searchArtists,
     searchTracks,
-    toggleLike,
-    toggleUnLike,
+    toggleAlbumLike,
+    toggleAlbumUnLike,
+    toggleTrackLike,
+    toggleTrackUnLike,
     UserAlbumLike,
     UserTrackLike
 } from "@soundx/services";
@@ -57,7 +59,7 @@ export default function SearchScreen() {
 
   // Add to Playlist Modal State
   const [addToPlaylistVisible, setAddToPlaylistVisible] = useState(false);
-  const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<number | string | null>(null);
 
   useEffect(() => {
     fetchSearchMeta();
@@ -145,19 +147,10 @@ export default function SearchScreen() {
 
       if (type === 'track') {
           setResults(prev => ({ ...prev, tracks: updateList(prev.tracks) }));
-          await (isLiked ? toggleUnLike(item.id, user.id) : toggleLike(item.id, user.id));
+          await (isLiked ? toggleTrackUnLike(item.id, user.id) : toggleTrackLike(item.id, user.id));
       } else if (type === 'album') {
-          // Album API needs to be confirmed, assuming similar but distinct or not requested yet. 
-          // User asked for "Album and Single", assuming Album Like is supported.
-          // Wait, toggleLike/toggleUnLike in services usually track-specific unless overloaded.
-          // Let's check imports... We have toggleLike imported.
-          // Assuming toggleLike handles generic ID? No, usually separate.
-          // For now, let's implement for Track primarily as explicitly requested "adding to playlist" (which is track only usually).
-          // But user said "Search Result Album and Single -> 1. Like 2. Add to Playlist".
-          // Actually, Add to Playlist for Album adds all tracks? Add to Playlist for Single adds single.
-          // Let's stick to Tracks for AddToPlaylist for now as modal supports trackId.
-          // For Album Like, if no API, maybe skip?
-          // Let's safe guard.
+          setResults(prev => ({ ...prev, albums: updateList(prev.albums) }));
+          await (isLiked ? toggleAlbumUnLike(item.id, user.id) : toggleAlbumLike(item.id, user.id));
       }
       
     } catch (e) {
@@ -181,7 +174,9 @@ export default function SearchScreen() {
     const isLiked = user && (
        type === 'track' 
        ? item.likedByUsers?.some((l: UserTrackLike) => l.userId === user.id)
-       : null // Album like logic if needed
+       : type === 'album'
+         ? item.likedByUsers?.some((l: UserAlbumLike) => l.userId === user.id)
+         : null
     );
 
     return (
@@ -212,7 +207,7 @@ export default function SearchScreen() {
         
         {/* Right Side Buttons */}
         <View style={styles.itemActions}>
-            {type === 'track' && (
+            {(type === 'track' || type === 'album') && (
                 <>
                     <TouchableOpacity 
                         style={styles.actionButton}
@@ -224,15 +219,17 @@ export default function SearchScreen() {
                             color={isLiked ? colors.primary : colors.secondary} 
                         />
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => {
-                            setSelectedTrackId(item.id);
-                            setAddToPlaylistVisible(true);
-                        }}
-                    >
-                        <Ionicons name="add-circle-outline" size={20} color={colors.secondary} />
-                    </TouchableOpacity>
+                    {type === 'track' && (
+                        <TouchableOpacity 
+                            style={styles.actionButton}
+                            onPress={() => {
+                                setSelectedTrackId(item.id);
+                                setAddToPlaylistVisible(true);
+                            }}
+                        >
+                            <Ionicons name="add-circle-outline" size={20} color={colors.secondary} />
+                        </TouchableOpacity>
+                    )}
                 </>
             )}
              {/* Keep chevron for others or add consistent actions */}

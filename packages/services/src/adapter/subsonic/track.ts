@@ -1,6 +1,6 @@
 import type {
-    ISuccessResponse,
-    Track
+  ISuccessResponse,
+  Track
 } from "../../models";
 import { ITrackAdapter } from "../interface";
 import { SubsonicClient } from "./client";
@@ -63,17 +63,17 @@ export class SubsonicTrackAdapter implements ITrackAdapter {
     throw new Error("Creation not supported in Subsonic Adapter");
   }
 
-  async updateTrack(id: number, data: Partial<Track>): Promise<ISuccessResponse<Track>> {
+  async updateTrack(id: number | string, data: Partial<Track>): Promise<ISuccessResponse<Track>> {
      // Subsonic supports star/unstar, but editing metadata is limited.
      // star: star.view?id=...
      throw new Error("Update not supported fully in Subsonic Adapter");
   }
 
-  async deleteTrack(id: number, deleteAlbum: boolean = false): Promise<ISuccessResponse<boolean>> {
+  async deleteTrack(id: number | string, deleteAlbum: boolean = false): Promise<ISuccessResponse<boolean>> {
      throw new Error("Delete not supported in Subsonic Adapter");
   }
 
-  async getDeletionImpact(id: number) {
+  async getDeletionImpact(id: number | string) {
      return this.response({ isLastTrackInAlbum: false, albumName: null });
   }
 
@@ -81,7 +81,7 @@ export class SubsonicTrackAdapter implements ITrackAdapter {
      throw new Error("Batch create not supported");
   }
 
-  async batchDeleteTracks(ids: number[]): Promise<ISuccessResponse<boolean>> {
+  async batchDeleteTracks(ids: (number | string)[]): Promise<ISuccessResponse<boolean>> {
      throw new Error("Batch delete not supported");
   }
 
@@ -97,5 +97,33 @@ export class SubsonicTrackAdapter implements ITrackAdapter {
     const res = await this.client.get<{searchResult3: { song: SubsonicChild[] }}>("search3", { query: artist, songCount: 50 });
     const tracks = (res.searchResult3?.song || []).map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id)));
     return this.response(tracks);
+  }
+
+  async toggleLike(id: number | string, userId: number | string) {
+    await this.client.get("star", { id: id.toString() });
+    return this.response(null);
+  }
+
+  async toggleUnLike(id: number | string, userId: number | string) {
+    await this.client.get("unstar", { id: id.toString() });
+    return this.response(null);
+  }
+
+  async getFavoriteTracks(userId: number | string, loadCount: number, pageSize: number, type?: string) {
+    const res = await this.client.get<{ starred: { song: SubsonicChild[] } }>("getStarred");
+    const tracks = (res.starred?.song || [])
+      .slice(loadCount, loadCount + pageSize)
+      .map(s => ({
+        track: mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id)),
+        createdAt: s.starred || s.created || new Date().toISOString()
+      }));
+    
+    return this.response({
+        pageSize,
+        loadCount: loadCount + tracks.length,
+        list: tracks,
+        total: res.starred?.song?.length || 0,
+        hasMore: loadCount + tracks.length < (res.starred?.song?.length || 0)
+    });
   }
 }

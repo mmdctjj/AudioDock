@@ -63,10 +63,10 @@ export class SubsonicClient {
          return `${cleanBase}/rest/${cleanEndpoint}.view`;
     }
 
-    public getCoverUrl(id: string, size?: number) {
+    public getCoverUrl(id: string | number, size?: number) {
          const auth = this.getAuthParams() as any;
          const query = new URLSearchParams(auth);
-         query.append("id", id);
+         query.append("id", id.toString());
          if (size) query.append("size", size.toString());
          return `${this.buildUrl(this.getBaseUrl(), "getCoverArt")}?${query.toString()}`;
     }

@@ -18,7 +18,7 @@ export const ensureCacheDirExists = async () => {
 /**
  * Get the local path for a track
  */
-export const getLocalPath = (trackId: number, originalPath: string): string => {
+export const getLocalPath = (trackId: number | string, originalPath: string): string => {
   const extension = originalPath.split('.').pop() || 'mp3';
   return `${CACHE_DIR}${trackId}.${extension}`;
 };
@@ -26,7 +26,7 @@ export const getLocalPath = (trackId: number, originalPath: string): string => {
 /**
  * Check if a track is cached locally
  */
-export const isCached = async (trackId: number, originalPath: string): Promise<string | null> => {
+export const isCached = async (trackId: number | string, originalPath: string): Promise<string | null> => {
   try {
     const localPath = getLocalPath(trackId, originalPath);
     const fileInfo = await FileSystem.getInfoAsync(localPath);
@@ -36,7 +36,7 @@ export const isCached = async (trackId: number, originalPath: string): Promise<s
   }
 };
 
-const downloadPromises = new Map<number, Promise<string | null>>();
+const downloadPromises = new Map<number | string, Promise<string | null>>();
 
 /**
  * Download a track to the local cache and save metadata
@@ -140,7 +140,7 @@ export const getDownloadedTracks = async (): Promise<Track[]> => {
 /**
  * Remove a downloaded track
  */
-export const removeDownloadedTrack = async (trackId: number, url?: string) => {
+export const removeDownloadedTrack = async (trackId: number | string, url?: string) => {
     try {
         // Remove file
         if (url) {

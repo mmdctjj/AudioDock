@@ -10,22 +10,22 @@ import { Album, Track } from "@/src/models";
 import { downloadTracks } from "@/src/services/downloadManager";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  getAlbumById,
-  getAlbumTracks,
-  toggleAlbumLike,
-  unlikeAlbum,
+    getAlbumById,
+    getAlbumTracks,
+    toggleAlbumLike,
+    toggleAlbumUnLike,
 } from "@soundx/services";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function AlbumDetailScreen() {
@@ -47,17 +47,17 @@ export default function AlbumDetailScreen() {
   const [albumMoreVisible, setAlbumMoreVisible] = useState(false);
   const [addToPlaylistVisible, setAddToPlaylistVisible] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedTrackIds, setSelectedTrackIds] = useState<number[]>([]);
+  const [selectedTrackIds, setSelectedTrackIds] = useState<(number | string)[]>([]);
 
   const PAGE_SIZE = 50;
 
   useEffect(() => {
     if (id) {
-      loadData(Number(id));
+      loadData(id as string);
     }
   }, [id]);
 
-  const loadData = async (albumId: number) => {
+  const loadData = async (albumId: number | string) => {
     try {
       setLoading(true);
       const [albumRes, tracksRes] = await Promise.all([
@@ -107,7 +107,7 @@ export default function AlbumDetailScreen() {
     if (!user || !album) return;
     try {
       const res = isLiked
-        ? await unlikeAlbum(album.id, user.id)
+        ? await toggleAlbumUnLike(album.id, user.id)
         : await toggleAlbumLike(album.id, user.id);
 
       if (res.code === 200) {
@@ -118,7 +118,7 @@ export default function AlbumDetailScreen() {
     }
   };
 
-  const toggleTrackSelection = (trackId: number) => {
+  const toggleTrackSelection = (trackId: number | string) => {
     setSelectedTrackIds((prev) =>
       prev.includes(trackId)
         ? prev.filter((id) => id !== trackId)

@@ -36,7 +36,7 @@ import {
   Table,
   theme,
   Typography,
-  type MenuProps
+  type MenuProps,
 } from "antd";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -78,7 +78,7 @@ const PlaylistDetail: React.FC = () => {
   const [sort, setSort] = useState<"asc" | "desc">("asc");
 
   const [modalApi, modalContextHolder] = Modal.useModal();
-  
+
   const { token } = theme.useToken();
   const {
     play,
@@ -94,7 +94,7 @@ const PlaylistDetail: React.FC = () => {
     if (!id) return;
     setLoading(true);
     try {
-      const res = await getPlaylistById(Number(id));
+      const res = await getPlaylistById(id);
       if (res.code === 200) {
         setPlaylist(res.data);
       }
@@ -118,18 +118,20 @@ const PlaylistDetail: React.FC = () => {
 
   const handleDownloadSelected = () => {
     if (!playlist?.tracks) return;
-    const selectedTracks = playlist.tracks.filter((t) => selectedRowKeys.includes(t.id));
+    const selectedTracks = playlist.tracks.filter((t) =>
+      selectedRowKeys.includes(t.id),
+    );
     if (selectedTracks.length === 0) {
-        message.warning("请先选择要下载的曲目");
-        return;
+      message.warning("请先选择要下载的曲目");
+      return;
     }
     message.info(`开始下载 ${selectedTracks.length} 首曲目`);
     downloadTracks(selectedTracks, (completed: number, total: number) => {
-        if (completed === total) {
-            message.success(`${total} 首曲目下载完成`);
-            setIsSelectionMode(false);
-            setSelectedRowKeys([]);
-        }
+      if (completed === total) {
+        message.success(`${total} 首曲目下载完成`);
+        setIsSelectionMode(false);
+        setSelectedRowKeys([]);
+      }
     });
   };
 
@@ -143,7 +145,7 @@ const PlaylistDetail: React.FC = () => {
   const handleDeletePlaylist = async () => {
     if (!id) return;
     try {
-      const res = await deletePlaylist(Number(id));
+      const res = await deletePlaylist(id);
       if (res.code === 200) {
         message.success("删除成功");
         navigate("/recommended");
@@ -158,7 +160,7 @@ const PlaylistDetail: React.FC = () => {
     if (!id) return;
     try {
       const values = await form.validateFields();
-      const res = await updatePlaylist(Number(id), values.name);
+      const res = await updatePlaylist(id, values.name);
       if (res.code === 200) {
         message.success("更新成功");
         setIsEditModalOpen(false);
@@ -169,10 +171,10 @@ const PlaylistDetail: React.FC = () => {
     }
   };
 
-  const handleRemoveTrack = async (trackId: number) => {
+  const handleRemoveTrack = async (trackId: string | number) => {
     if (!id) return;
     try {
-      const res = await removeTrackFromPlaylist(Number(id), trackId);
+      const res = await removeTrackFromPlaylist(id, trackId);
       if (res.code === 200) {
         message.success("移除成功");
         fetchPlaylist();
@@ -197,20 +199,20 @@ const PlaylistDetail: React.FC = () => {
     }
   };
 
-  const handleAddToPlaylist = async (targetPlaylistId: number) => {
+  const handleAddToPlaylist = async (targetPlaylistId: string | number) => {
     if (!selectedTrack || !id) return;
     try {
       // 1. Add to new playlist
       const addRes = await addTrackToPlaylist(
         targetPlaylistId,
-        selectedTrack.id
+        selectedTrack.id,
       );
       if (addRes.code === 200) {
         // 2. If move, remove from current playlist
         if (pendingAction === "move") {
           const removeRes = await removeTrackFromPlaylist(
             Number(id),
-            selectedTrack.id
+            selectedTrack.id,
           );
           if (removeRes.code === 200) {
             message.success("移动成功");
@@ -235,7 +237,7 @@ const PlaylistDetail: React.FC = () => {
     playlist?.tracks?.filter(
       (track) =>
         track.name.toLowerCase().includes(keyword.toLowerCase()) ||
-        track.artist.toLowerCase().includes(keyword.toLowerCase())
+        track.artist.toLowerCase().includes(keyword.toLowerCase()),
     ) || [];
 
   // Sort tracks
@@ -387,7 +389,12 @@ const PlaylistDetail: React.FC = () => {
             <img
               src={coverUrl}
               alt="cover"
-              style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
             />
           </div>
           <Flex vertical gap={0}>
@@ -445,24 +452,24 @@ const PlaylistDetail: React.FC = () => {
                   >
                     <DeleteOutlined className={styles.actionIcon} />
                   </Popconfirm>
-                  <CloudDownloadOutlined 
-                    className={styles.actionIcon} 
+                  <CloudDownloadOutlined
+                    className={styles.actionIcon}
                     onClick={() => {
-                        setIsSelectionMode(true);
+                      setIsSelectionMode(true);
                     }}
                   />
                   {isSelectionMode && (
                     <Space size={8} style={{ marginLeft: 16 }}>
-                      <Button 
-                        type="text" 
-                        size="small" 
+                      <Button
+                        type="text"
+                        size="small"
                         onClick={handleDownloadSelected}
                       >
                         点击下载已选中的 ({selectedRowKeys.length})首曲目
                       </Button>
-                      <Button 
-                        size="small" 
-                        type="text" 
+                      <Button
+                        size="small"
+                        type="text"
                         icon={<CloseOutlined />}
                         onClick={() => {
                           setIsSelectionMode(false);

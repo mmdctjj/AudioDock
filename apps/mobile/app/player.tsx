@@ -8,20 +8,20 @@ import { Track, TrackType, UserTrackLike } from "@/src/models";
 import { Ionicons } from "@expo/vector-icons";
 import { Slider } from "@miblanchard/react-native-slider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { toggleLike, toggleUnLike } from "@soundx/services";
+import { toggleTrackLike, toggleTrackUnLike } from "@soundx/services";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Dimensions,
-  FlatList,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    Animated,
+    Dimensions,
+    FlatList,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PlayerMoreModal } from "../src/components/PlayerMoreModal";
@@ -291,9 +291,9 @@ export default function PlayerScreen() {
 
     try {
       if (previousLiked) {
-        await toggleUnLike(Number(currentTrack.id), user.id);
+        await toggleTrackUnLike(currentTrack.id, user.id);
       } else {
-        await toggleLike(Number(currentTrack.id), user.id);
+        await toggleTrackLike(currentTrack.id, user.id);
       }
     } catch (error) {
       console.error("Failed to toggle like", error);

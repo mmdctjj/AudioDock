@@ -34,6 +34,7 @@ export interface SubsonicChild {
   albumId?: string;
   artistId?: string;
   type?: string;
+  starred?: string;
 }
 
 export interface SubsonicAlbum {
@@ -48,6 +49,7 @@ export interface SubsonicAlbum {
   created?: string;
   year?: number;
   genre?: string;
+  starred?: string;
 }
 
 export interface SubsonicArtist {
@@ -66,6 +68,9 @@ export interface SubsonicDirectory {
 }
 
 export interface SubsonicAlbumList {
+  albumList2: {
+    album: SubsonicAlbum[];
+  };
   albumList: {
     album: SubsonicAlbum[];
   };

@@ -1,10 +1,10 @@
 import {
-    HeartFilled,
-    HeartOutlined,
-    PlusOutlined
+  HeartFilled,
+  HeartOutlined,
+  PlusOutlined
 } from "@ant-design/icons";
 import type { Playlist, SearchResults as SearchResultsType } from "@soundx/services";
-import { addTrackToPlaylist, getPlaylists, toggleLike, toggleUnLike } from "@soundx/services";
+import { addTrackToPlaylist, getPlaylists, toggleTrackLike, toggleTrackUnLike } from "@soundx/services";
 import { Avatar, Empty, List, message, Modal, theme } from "antd";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -40,7 +40,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   // Add to Playlist State
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<number | string | null>(null);
 
   const handleTrackClick = (track: any) => {
     play(track);
@@ -48,17 +48,17 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     onClose();
   };
 
-  const handleArtistClick = (artistId: number) => {
+  const handleArtistClick = (artistId: number | string) => {
     navigate(`/artist/${artistId}`);
     onClose();
   };
 
-  const handleAlbumClick = (albumId: number) => {
+  const handleAlbumClick = (albumId: number | string) => {
     navigate(`/detail?id=${albumId}`);
     onClose();
   };
 
-  const openPlaylistModal = async (e: React.MouseEvent, trackId: number) => {
+  const openPlaylistModal = async (e: React.MouseEvent, trackId: number | string) => {
     e.stopPropagation();
     setSelectedTrackId(trackId);
     try {
@@ -72,7 +72,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     }
   };
 
-  const handleAddToPlaylist = async (playlistId: number) => {
+  const handleAddToPlaylist = async (playlistId: number | string) => {
     if (!selectedTrackId) return;
     try {
       const res = await addTrackToPlaylist(playlistId, selectedTrackId);
@@ -104,7 +104,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
       const newLiked = !liked;
       setLiked(newLiked);
       try {
-        await (newLiked ? toggleLike(data.id, user.id) : toggleUnLike(data.id, user.id));
+        await (newLiked ? toggleTrackLike(data.id, user.id) : toggleTrackUnLike(data.id, user.id));
       } catch (e) {
         setLiked(!newLiked); // Revert
       }

@@ -5,11 +5,11 @@ export const getAdminUsers = async () => {
   return request.get<ISuccessResponse<User[]>>("/admin/users");
 };
 
-export const deleteAdminUser = async (id: number) => {
+export const deleteAdminUser = async (id: number | string) => {
   return request.delete<ISuccessResponse<boolean>>(`/admin/users/${id}`);
 };
 
-export const setAdminUserExpiration = async (id: number, days: number | null) => {
+export const setAdminUserExpiration = async (id: number | string, days: number | null) => {
   return request.post<ISuccessResponse<User>>(`/admin/users/${id}/expiration`, { days });
 };
 

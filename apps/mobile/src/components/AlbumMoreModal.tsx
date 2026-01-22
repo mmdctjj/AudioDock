@@ -19,7 +19,7 @@ import { downloadTracks } from "../services/downloadManager";
 interface AlbumMoreModalProps {
   visible: boolean;
   album: Album | null;
-  trackIds: number[];
+  trackIds: (number | string)[];
   tracks: Track[];
   onClose: () => void;
   onAddToPlaylist: () => void;

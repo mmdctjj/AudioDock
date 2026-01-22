@@ -57,9 +57,9 @@ export interface Track {
   index: number | null;
   type: TrackType;
   createdAt: string | Date; // DateTime in Prisma maps to Date object or ISO string in JSON
-  artistId?: number;
-  albumId?: number;
-  folderId?: number;
+  artistId?: number | string;
+  albumId?: number | string;
+  folderId?: number | string;
   likedByUsers?: UserTrackLike[];
   listenedByUsers?: UserTrackHistory[];
   likedAsAudiobookByUsers?: UserAudiobookLike[];
@@ -78,7 +78,7 @@ export interface Album {
   likedByUsers?: UserAlbumLike[];
   listenedByUsers?: UserAlbumHistory[];
   progress?: number;
-  resumeTrackId?: number | null;
+  resumeTrackId?: number | string | null;
   resumeProgress?: number | null;
 }
 
@@ -93,8 +93,8 @@ export interface Artist {
 
 export interface UserTrackLike {
   id: number | string;
-  userId: number;
-  trackId: number;
+  userId: number | string;
+  trackId: number | string;
   createdAt: string | Date;
   user?: User;
   track?: Track;
@@ -102,8 +102,8 @@ export interface UserTrackLike {
 
 export interface UserTrackHistory {
   id: number | string;
-  userId: number;
-  trackId: number;
+  userId: number | string;
+  trackId: number | string;
   listenedAt: string | Date;
   user?: User;
   track?: Track;
@@ -111,8 +111,8 @@ export interface UserTrackHistory {
 
 export interface UserAlbumLike {
   id: number | string;
-  userId: number;
-  albumId: number;
+  userId: number | string;
+  albumId: number | string;
   createdAt: string | Date;
   user?: User;
   album?: Album;
@@ -120,8 +120,8 @@ export interface UserAlbumLike {
 
 export interface UserAlbumHistory {
   id: number | string;
-  userId: number;
-  albumId: number;
+  userId: number | string;
+  albumId: number | string;
   listenedAt: string | Date;
   user?: User;
   album?: Album;
@@ -129,8 +129,8 @@ export interface UserAlbumHistory {
 
 export interface UserAudiobookLike {
   id: number | string;
-  userId: number;
-  trackId: number;
+  userId: number | string;
+  trackId: number | string;
   createdAt: string | Date;
   user?: User;
   track?: Track;
@@ -138,8 +138,8 @@ export interface UserAudiobookLike {
 
 export interface UserAudiobookHistory {
   id: number | string;
-  userId: number;
-  trackId: number;
+  userId: number | string;
+  trackId: number | string;
   listenedAt: string | Date;
   progress: number;
   user?: User;
@@ -147,7 +147,7 @@ export interface UserAudiobookHistory {
 }
 
 export interface User {
-  id: number;
+  id: number | string;
   username: string;
   password?: string;
   is_admin: boolean;
@@ -163,12 +163,12 @@ export interface User {
 }
 
 export interface Playlist {
-  id: number;
+  id: number | string;
   name: string;
   type: TrackType;
   createdAt: string | Date;
   updatedAt: string | Date;
-  userId: number;
+  userId: number | string;
   user?: User;
   tracks?: Track[];
   _count?: {
@@ -176,19 +176,19 @@ export interface Playlist {
   };
 }
 export interface Device {
-  id: number;
+  id: number | string;
   name: string;
-  userId: number;
+  userId: number | string;
   isOnline: boolean;
   lastSeen?: string | Date;
   createdAt: Date;
   updatedAt: Date;
 }
 export interface Folder {
-  id: number;
+  id: number | string;
   path: string;
   name: string;
-  parentId: number | null;
+  parentId: number | string | null;
   type: TrackType;
   children?: Folder[];
   tracks?: Track[];

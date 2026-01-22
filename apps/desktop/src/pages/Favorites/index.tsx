@@ -1,21 +1,21 @@
 import {
-    AppstoreOutlined,
-    SyncOutlined,
-    UnorderedListOutlined,
+  AppstoreOutlined,
+  SyncOutlined,
+  UnorderedListOutlined,
 } from "@ant-design/icons";
 import { getFavoriteAlbums, getFavoriteTracks } from "@soundx/services";
 import { useInfiniteScroll } from "ahooks";
 import {
-    Button,
-    Col,
-    Empty,
-    Flex,
-    Row,
-    Segmented,
-    Skeleton,
-    Timeline,
-    Typography,
-    theme,
+  Button,
+  Col,
+  Empty,
+  Flex,
+  Row,
+  Segmented,
+  Skeleton,
+  Timeline,
+  Typography,
+  theme,
 } from "antd";
 import React, { useRef, useState } from "react";
 import Cover from "../../components/Cover/index";
@@ -60,6 +60,8 @@ const Favorites: React.FC = () => {
         );
         if (res.code === 200 && res.data) {
           const { list } = res.data;
+
+          console.log(list);
 
           // Group by date
           const timelineMap = new Map<string, Album[]>();
@@ -177,6 +179,8 @@ const Favorites: React.FC = () => {
       reloadDeps: [viewMode, type],
     }
   );
+
+  console.log(data);
 
   const handleRefresh = async () => {
     setRefreshing(true);

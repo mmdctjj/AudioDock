@@ -49,11 +49,11 @@ export class NativeArtistAdapter implements IArtistAdapter {
     return request.post<any, ISuccessResponse<Artist>>("/artist", data);
   }
 
-  updateArtist(id: number, data: Partial<Artist>) {
+  updateArtist(id: number | string, data: Partial<Artist>) {
     return request.put<any, ISuccessResponse<Artist>>(`/artist/${id}`, data);
   }
 
-  deleteArtist(id: number) {
+  deleteArtist(id: number | string) {
     return request.delete<any, ISuccessResponse<boolean>>(`/artist/${id}`);
   }
 
@@ -64,14 +64,14 @@ export class NativeArtistAdapter implements IArtistAdapter {
     );
   }
 
-  batchDeleteArtists(ids: number[]) {
+  batchDeleteArtists(ids: (number | string)[]) {
     return request.delete<any, ISuccessResponse<boolean>>(
       "/artist/batch-delete",
       { data: ids }
     );
   }
 
-  getArtistById(id: number) {
+  getArtistById(id: number | string) {
     return request.get<any, ISuccessResponse<Artist>>(`/artist/${id}`);
   }
 

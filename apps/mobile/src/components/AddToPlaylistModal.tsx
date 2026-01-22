@@ -18,8 +18,8 @@ import { usePlayMode } from "../utils/playMode";
 
 interface AddToPlaylistModalProps {
   visible: boolean;
-  trackId?: number | null;
-  trackIds?: number[];
+  trackId?: number | string | null;
+  trackIds?: (number | string)[];
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -37,7 +37,7 @@ export const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
   const insets = useSafeAreaInsets();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(false);
-  const [addingId, setAddingId] = useState<number | null>(null);
+  const [addingId, setAddingId] = useState<number | string | null>(null);
 
   useEffect(() => {
     if (visible && user) {
@@ -60,7 +60,7 @@ export const AddToPlaylistModal: React.FC<AddToPlaylistModalProps> = ({
     }
   };
 
-  const handleAddToPlaylist = async (playlistId: number) => {
+  const handleAddToPlaylist = async (playlistId: number | string) => {
     if (!trackId && (!trackIds || trackIds.length === 0)) return;
     try {
       setAddingId(playlistId);

@@ -12,7 +12,7 @@ import {
   getAlbumById,
   getAlbumTracks,
   toggleAlbumLike,
-  unlikeAlbum,
+  toggleAlbumUnLike,
 } from "@soundx/services";
 import { useRequest } from "ahooks";
 import { Avatar, Button, Col, Flex, Input, Row, Space, theme, Typography } from "antd";
@@ -62,7 +62,7 @@ const Detail: React.FC = () => {
     },
   });
 
-  const { run: unlikeAlbumRequest } = useRequest(unlikeAlbum, {
+  const { run: unlikeAlbumRequest } = useRequest(toggleAlbumUnLike, {
     manual: true,
     onSuccess: (res) => {
       if (res.code === 200) {
@@ -74,16 +74,16 @@ const Detail: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      fetchAlbumDetails(Number(id));
+      fetchAlbumDetails(id);
       // Reset list when id changes
       setTracks([]);
       setPage(0);
       setHasMore(true);
-      fetchTracks(Number(id), 0, sort, keyword);
+      fetchTracks(id, 0, sort, keyword);
     }
   }, [id, sort, keyword]);
 
-  const fetchAlbumDetails = async (albumId: number) => {
+  const fetchAlbumDetails = async (albumId: number | string) => {
     try {
       const res = await getAlbumById(albumId);
       if (res.code === 200) {
@@ -102,7 +102,7 @@ const Detail: React.FC = () => {
   };
 
   const fetchTracks = async (
-    albumId: number,
+    albumId: number | string,
     currentPage: number,
     currentSort: "asc" | "desc",
     currentKeyword: string
@@ -145,7 +145,7 @@ const Detail: React.FC = () => {
       !loading &&
       id
     ) {
-      fetchTracks(Number(id), page, sort, keyword);
+      fetchTracks(id, page, sort, keyword);
     }
   };
 
@@ -180,7 +180,7 @@ const Detail: React.FC = () => {
     setTracks([]);
     setPage(0);
     setHasMore(true);
-    fetchTracks(Number(id), 0, sort, keyword);
+    fetchTracks(id, 0, sort, keyword);
   };
 
   return (

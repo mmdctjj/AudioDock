@@ -1,6 +1,6 @@
 import type {
-    Artist,
-    ISuccessResponse
+  Artist,
+  ISuccessResponse
 } from "../../models";
 import { IArtistAdapter } from "../interface";
 import { SubsonicClient } from "./client";
@@ -74,11 +74,11 @@ export class SubsonicArtistAdapter implements IArtistAdapter {
      throw new Error("Create Artist not supported");
   }
 
-  async updateArtist(id: number, data: Partial<Artist>): Promise<ISuccessResponse<Artist>> {
+  async updateArtist(id: number | string, data: Partial<Artist>): Promise<ISuccessResponse<Artist>> {
     throw new Error("Update Artist not supported");
   }
 
-  async deleteArtist(id: number): Promise<ISuccessResponse<boolean>> {
+  async deleteArtist(id: number | string): Promise<ISuccessResponse<boolean>> {
     throw new Error("Delete Artist not supported");
   }
 
@@ -86,11 +86,11 @@ export class SubsonicArtistAdapter implements IArtistAdapter {
     throw new Error("Batch Create Artist not supported");
   }
 
-  async batchDeleteArtists(ids: number[]): Promise<ISuccessResponse<boolean>> {
+  async batchDeleteArtists(ids: (number | string)[]): Promise<ISuccessResponse<boolean>> {
     throw new Error("Batch Delete Artist not supported");
   }
 
-  async getArtistById(id: number) {
+  async getArtistById(id: number | string) {
      const res = await this.client.get<SubsonicArtistInfo>("getArtist", { id: id.toString() });
      return this.response(mapSubsonicArtistToArtist(res.artist, (id) => this.client.getCoverUrl(id)));
   }

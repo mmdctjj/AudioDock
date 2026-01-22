@@ -1,6 +1,6 @@
 import { getAdapter } from "./adapter/manager";
 import type {
-    Artist
+  Artist
 } from "./models";
   
   export const getArtistList = (
@@ -29,11 +29,11 @@ import type {
     return getAdapter().artist.createArtist(data);
   };
   
-  export const updateArtist = (id: number, data: Partial<Artist>) => {
+  export const updateArtist = (id: number | string, data: Partial<Artist>) => {
     return getAdapter().artist.updateArtist(id, data);
   };
   
-  export const deleteArtist = (id: number) => {
+  export const deleteArtist = (id: number | string) => {
     return getAdapter().artist.deleteArtist(id);
   };
   
@@ -41,11 +41,11 @@ import type {
     return getAdapter().artist.batchCreateArtists(data);
   };
   
-  export const batchDeleteArtists = (ids: number[]) => {
+  export const batchDeleteArtists = (ids: (number | string)[]) => {
     return getAdapter().artist.batchDeleteArtists(ids);
   };
   
-  export const getArtistById = (id: number) => {
+  export const getArtistById = (id: number | string) => {
     return getAdapter().artist.getArtistById(id);
   };
   

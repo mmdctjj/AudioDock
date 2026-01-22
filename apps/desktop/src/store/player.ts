@@ -1,4 +1,4 @@
-import { addAlbumToHistory, addToHistory, reportAudiobookProgress, toggleLike, toggleUnLike } from "@soundx/services";
+import { addAlbumToHistory, addToHistory, reportAudiobookProgress, toggleTrackLike, toggleTrackUnLike } from "@soundx/services";
 import { create } from "zustand";
 import { TrackType, type Track } from "../models";
 import { getPlayMode } from "../utils/playMode";
@@ -9,7 +9,7 @@ interface PlayerModeState {
   playlist: Track[];
   currentTime: number;
   duration: number;
-  currentAlbumId: number | null;
+  currentAlbumId: number | string | null;
 }
 
 interface PlayerState {
@@ -18,7 +18,7 @@ interface PlayerState {
   playlist: Track[];
   currentTime: number;
   duration: number;
-  currentAlbumId: number | null;
+  currentAlbumId: number | string | null;
 
   // Global State
   isPlaying: boolean;
@@ -30,7 +30,7 @@ interface PlayerState {
   modes: Record<TrackType, PlayerModeState>;
 
   // Actions
-  play: (track?: Track, albumId?: number, startTime?: number) => void;
+  play: (track?: Track, albumId?: number | string, startTime?: number) => void;
   pause: () => void;
   setPlaylist: (tracks: Track[]) => void;
   next: () => void;
@@ -39,8 +39,8 @@ interface PlayerState {
   setVolume: (volume: number) => void;
   setCurrentTime: (time: number) => void;
   setDuration: (duration: number) => void;
-  toggleLike: (trackId: number, type: "like" | "unlike") => Promise<void>;
-  removeTrack: (trackId: number) => void;
+  toggleLike: (trackId: number | string, type: "like" | "unlike") => Promise<void>;
+  removeTrack: (trackId: number | string) => void;
 
   // Internal/System Actions
   syncActiveMode: (mode: TrackType) => void;
@@ -389,7 +389,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           console.warn("User not logged in, cannot toggle like");
           return;
         }
-        await (type === "like" ? toggleLike(trackId, userId) : toggleUnLike(trackId, userId));
+        await (type === "like" ? toggleTrackLike(trackId, userId) : toggleTrackUnLike(trackId, userId));
         
         const state = get();
         const updateTrack = (track: Track) => {

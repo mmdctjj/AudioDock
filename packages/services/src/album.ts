@@ -1,6 +1,6 @@
 import { getAdapter } from "./adapter/manager";
 import type {
-    Album
+  Album
 } from "./models";
   
   export const getAlbumList = () => {
@@ -26,11 +26,11 @@ import type {
     return getAdapter().album.createAlbum(data);
   };
   
-  export const updateAlbum = (id: number, data: Partial<Album>) => {
+  export const updateAlbum = (id: number | string, data: Partial<Album>) => {
     return getAdapter().album.updateAlbum(id, data);
   };
   
-  export const deleteAlbum = (id: number) => {
+  export const deleteAlbum = (id: number | string) => {
     return getAdapter().album.deleteAlbum(id);
   };
   
@@ -38,7 +38,7 @@ import type {
     return getAdapter().album.batchCreateAlbums(data);
   };
   
-  export const batchDeleteAlbums = (ids: number[]) => {
+  export const batchDeleteAlbums = (ids: (number | string)[]) => {
     return getAdapter().album.batchDeleteAlbums(ids);
   };
   
@@ -53,18 +53,18 @@ import type {
   };
   
   // Get album details by ID
-  export const getAlbumById = (id: number) => {
+  export const getAlbumById = (id: number | string) => {
     return getAdapter().album.getAlbumById(id);
   };
   
   // Get album tracks with pagination
   export const getAlbumTracks = (
-    id: number,
+    id: number | string,
     pageSize: number,
     skip: number,
     sort: "asc" | "desc" = "asc",
     keyword?: string,
-    userId?: number,
+    userId?: number | string,
   ) => {
     return getAdapter().album.getAlbumTracks(id, pageSize, skip, sort, keyword, userId);
   };
@@ -75,4 +75,16 @@ import type {
   
   export const getCollaborativeAlbumsByArtist = (artist: string) => {
     return getAdapter().album.getCollaborativeAlbumsByArtist(artist);
+  };
+  
+  export const toggleAlbumLike = (id: number | string, userId: number | string) => {
+    return getAdapter().album.toggleLike(id, userId);
+  };
+  
+  export const toggleAlbumUnLike = (id: number | string, userId: number | string) => {
+    return getAdapter().album.toggleUnLike(id, userId);
+  };
+
+  export const getFavoriteAlbums = (userId: number | string, loadCount: number, pageSize: number, type?: string) => {
+    return getAdapter().album.getFavoriteAlbums(userId, loadCount, pageSize, type);
   };

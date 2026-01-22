@@ -1,8 +1,8 @@
 import type {
-    Album,
-    ILoadMoreData,
-    ISuccessResponse,
-    ITableData,
+  Album,
+  ILoadMoreData,
+  ISuccessResponse,
+  ITableData,
 } from "../../models";
 import request from "../../request";
 import { IAlbumAdapter } from "../interface";
@@ -37,11 +37,11 @@ export class NativeAlbumAdapter implements IAlbumAdapter {
     return request.post<any, ISuccessResponse<Album>>("/album", data);
   }
 
-  updateAlbum(id: number, data: Partial<Album>) {
+  updateAlbum(id: number | string, data: Partial<Album>) {
     return request.put<any, ISuccessResponse<Album>>(`/album/${id}`, data);
   }
 
-  deleteAlbum(id: number) {
+  deleteAlbum(id: number | string) {
     return request.delete<any, ISuccessResponse<boolean>>(`/album/${id}`);
   }
 
@@ -52,7 +52,7 @@ export class NativeAlbumAdapter implements IAlbumAdapter {
     );
   }
 
-  batchDeleteAlbums(ids: number[]) {
+  batchDeleteAlbums(ids: (number | string)[]) {
     return request.delete<any, ISuccessResponse<boolean>>(
       "/album/batch-delete",
       { data: ids }
@@ -71,17 +71,17 @@ export class NativeAlbumAdapter implements IAlbumAdapter {
     });
   }
 
-  getAlbumById(id: number) {
+  getAlbumById(id: number | string) {
     return request.get<any, ISuccessResponse<Album>>(`/album/${id}`);
   }
 
   getAlbumTracks(
-    id: number,
+    id: number | string,
     pageSize: number,
     skip: number,
     sort: "asc" | "desc" = "asc",
     keyword?: string,
-    userId?: number,
+    userId?: number | string,
   ) {
     return request.get<any, ISuccessResponse<{ list: any[]; total: number }>>(
       `/album/${id}/tracks`,
@@ -97,5 +97,24 @@ export class NativeAlbumAdapter implements IAlbumAdapter {
 
   getCollaborativeAlbumsByArtist(artist: string) {
     return request.get<any, ISuccessResponse<Album[]>>(`/album/collaborative/${artist}`);
+  }
+
+  toggleLike(id: number | string, userId: number | string) {
+    return request.post<any, ISuccessResponse<any>>("/user-album-likes", {
+      albumId: id,
+      userId,
+    });
+  }
+
+  toggleUnLike(id: number | string, userId: number | string) {
+    return request.delete<any, ISuccessResponse<any>>("/user-album-likes/unlike", {
+      params: { albumId: id, userId },
+    });
+  }
+
+  getFavoriteAlbums(userId: number | string, loadCount: number, pageSize: number, type?: string): Promise<ISuccessResponse<ILoadMoreData<{ album: Album, createdAt: string | Date }>>> {
+    return request.get<any, ISuccessResponse<ILoadMoreData<{ album: Album, createdAt: string | Date }>>>("/user-album-likes/list", {
+      params: { userId, loadCount, pageSize, type }
+    });
   }
 }

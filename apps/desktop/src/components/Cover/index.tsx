@@ -4,7 +4,7 @@ import {
   MoreOutlined,
   PlayCircleOutlined,
 } from "@ant-design/icons";
-import { getAlbumById, getAlbumTracks, toggleAlbumLike, unlikeAlbum } from "@soundx/services";
+import { getAlbumById, getAlbumTracks, toggleAlbumLike, toggleAlbumUnLike } from "@soundx/services";
 import type { MenuProps } from "antd";
 import { Dropdown, Skeleton, theme, Typography } from "antd";
 import React, { useEffect, useState } from "react";
@@ -42,9 +42,9 @@ const Cover: CoverComponent = ({ item, size, isTrack = false, onClick }) => {
     }
   }, [item, isTrack]);
 
-  const checkIfLiked = async (albumId: number) => {
+  const checkIfLiked = async (albumId: number | string) => {
     try {
-      const res = await getAlbumById(albumId);
+      const res = await getAlbumById(albumId as unknown as number);
       if (res.code === 200) {
         // @ts-ignore - likedByUsers is included in response
         const likedByUsers = res.data.likedByUsers || [];
@@ -114,7 +114,7 @@ const Cover: CoverComponent = ({ item, size, isTrack = false, onClick }) => {
 
     try {
       if (isLiked) {
-        const res = await unlikeAlbum((item as Album).id, user?.id || 0);
+        const res = await toggleAlbumUnLike((item as Album).id, user?.id || 0);
         if (res.code === 200) {
           setIsLiked(false);
           message.success("已取消收藏");

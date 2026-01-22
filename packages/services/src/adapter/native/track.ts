@@ -1,8 +1,8 @@
 import type {
-    ILoadMoreData,
-    ISuccessResponse,
-    ITableData,
-    Track,
+  ILoadMoreData,
+  ISuccessResponse,
+  ITableData,
+  Track,
 } from "../../models";
 import request from "../../request";
 import { ITrackAdapter } from "../interface";
@@ -36,17 +36,17 @@ export class NativeTrackAdapter implements ITrackAdapter {
     return request.post<any, ISuccessResponse<Track>>("/track", data);
   }
 
-  updateTrack(id: number, data: Partial<Track>) {
+  updateTrack(id: number | string, data: Partial<Track>) {
     return request.put<any, ISuccessResponse<Track>>(`/track/${id}`, data);
-  }
+  };
 
-  deleteTrack(id: number, deleteAlbum: boolean = false) {
+  deleteTrack(id: number | string, deleteAlbum: boolean = false) {
     return request.delete<any, ISuccessResponse<boolean>>(`/track/${id}`, {
       params: { deleteAlbum },
     });
   }
 
-  getDeletionImpact(id: number) {
+  getDeletionImpact(id: number | string) {
     return request.get<
       any,
       ISuccessResponse<{ isLastTrackInAlbum: boolean; albumName: string | null }>
@@ -60,7 +60,7 @@ export class NativeTrackAdapter implements ITrackAdapter {
     );
   }
 
-  batchDeleteTracks(ids: number[]) {
+  batchDeleteTracks(ids: (number | string)[]) {
     return request.delete<any, ISuccessResponse<boolean>>(
       "/track/batch-delete",
       { data: ids }
@@ -76,6 +76,25 @@ export class NativeTrackAdapter implements ITrackAdapter {
   getTracksByArtist(artist: string) {
     return request.get<any, ISuccessResponse<Track[]>>("/track/artist", {
       params: { artist },
+    });
+  }
+
+  toggleLike(id: number | string, userId: number | string) {
+    return request.post<any, ISuccessResponse<any>>("/user-track-likes/create", {
+      trackId: id,
+      userId,
+    });
+  }
+
+  toggleUnLike(id: number | string, userId: number | string) {
+    return request.delete<any, ISuccessResponse<any>>("/user-track-likes/unlike", {
+      params: { trackId: id, userId },
+    });
+  }
+
+  getFavoriteTracks(userId: number | string, loadCount: number, pageSize: number, type?: string): Promise<ISuccessResponse<ILoadMoreData<{ track: Track, createdAt: string | Date }>>> {
+    return request.get<any, ISuccessResponse<ILoadMoreData<{ track: Track, createdAt: string | Date }>>>("/user-track-likes/load-more", {
+      params: { pageSize, loadCount: loadCount, userId, lastId: loadCount, type },
     });
   }
 }

@@ -2,8 +2,8 @@ import { getServiceConfig } from "../../config";
 import { ISuccessResponse, User } from "../../models";
 import { IAuthAdapter, IUserAdapter } from "../interface-user-auth";
 import { SubsonicClient } from "./client";
-import { mapSubsonicAlbumToAlbum, mapSubsonicSongToTrack } from "./mapper";
-import { SubsonicAlbum, SubsonicChild } from "./types";
+import { mapSubsonicSongToTrack } from "./mapper";
+import { SubsonicChild } from "./types";
 
 export class SubsonicUserAdapter implements IUserAdapter {
     constructor(private client: SubsonicClient) {}
@@ -16,56 +16,28 @@ export class SubsonicUserAdapter implements IUserAdapter {
         };
     }
 
-  async addToHistory(trackId: number, userId: number, progress: number = 0, deviceName?: string, deviceId?: number, isSyncMode?: boolean) {
+  async addToHistory(trackId: number | string, userId: number | string, progress: number = 0, deviceName?: string, deviceId?: number | string, isSyncMode?: boolean) {
      // scrobble
-     await this.client.get("scrobble", { id: trackId, submission: true });
+     await this.client.get("scrobble", { id: trackId.toString(), submission: true });
      return this.response(null);
   }
 
-  async getLatestHistory(userId: number) {
+  async getLatestHistory(userId: number | string) {
       // Subsonic doesn't have "latest single history item" easily.
       return this.response(null);
   }
 
-  async addAlbumToHistory(albumId: number, userId: number) {
+  async addAlbumToHistory(albumId: number | string, userId: number | string) {
      return this.response(null);
   }
 
-  async getAlbumHistory(userId: number, loadCount: number, pageSize: number, type?: string) {
+  async getAlbumHistory(userId: number | string, loadCount: number, pageSize: number, type?: string) {
      return this.response({
          pageSize, loadCount, list: [], total: 0, hasMore: false
      });
   }
 
-  async toggleLike(trackId: number, userId: number) {
-      await this.client.get("star", { id: trackId });
-      return this.response(null);
-  }
-
-  async toggleUnLike(trackId: number, userId: number) {
-      await this.client.get("unstar", { id: trackId });
-      return this.response(null);
-  }
-
-  async toggleAlbumLike(albumId: number, userId: number) {
-      await this.client.get("star", { albumId: albumId });
-      return this.response(null);
-  }
-
-  async unlikeAlbum(albumId: number, userId: number) {
-      await this.client.get("unstar", { albumId: albumId });
-      return this.response(null);
-  }
-
-  async getFavoriteAlbums(userId: number, loadCount: number, pageSize: number, type?: string) {
-     const res = await this.client.get<{starred: { album: SubsonicAlbum[] } }>("getStarred");
-     const albums = (res.starred?.album || []).map(a => mapSubsonicAlbumToAlbum(a, (id) => this.client.getCoverUrl(id)));
-     return this.response({
-         pageSize, list: albums, total: albums.length, hasMore: false, loadCount: albums.length
-     });
-  }
-
-  async getFavoriteTracks(userId: number, loadCount: number, pageSize: number, type?: string) {
+  async getFavoriteTracks(userId: number | string, loadCount: number, pageSize: number, type?: string) {
     const res = await this.client.get<{starred: { song: SubsonicChild[] }}>("getStarred");
     const tracks = (res.starred?.song || []).map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id)));
     return this.response({
@@ -73,7 +45,7 @@ export class SubsonicUserAdapter implements IUserAdapter {
     });
   }
 
-  async getTrackHistory(userId: number, loadCount: number, pageSize: number, type?: string) {
+  async getTrackHistory(userId: number | string, loadCount: number, pageSize: number, type?: string) {
      // getNowPlaying? or we can't get history really?
      // Actually there is no simple "User History" in standard subsonic without extensions maybe?
      // There is "getNowPlaying".

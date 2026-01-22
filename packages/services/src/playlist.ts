@@ -1,36 +1,33 @@
-import type { ISuccessResponse, Playlist } from "./models";
-import request from "./request";
+import { getAdapter } from "./adapter/manager";
 
-
-
-export const createPlaylist = async (name: string, type: "MUSIC" | "AUDIOBOOK", userId: number) => {
-  return await request.post<any, ISuccessResponse<Playlist>>("/playlists", { name, type, userId });
+export const createPlaylist = async (name: string, type: "MUSIC" | "AUDIOBOOK", userId: number | string) => {
+  return await getAdapter().playlist.createPlaylist(name, type, userId);
 };
 
-export const getPlaylists = async (type?: "MUSIC" | "AUDIOBOOK", userId?: number) => {
-  return await request.get<any, ISuccessResponse<Playlist[]>>("/playlists", { params: { userId, type } });
+export const getPlaylists = async (type?: "MUSIC" | "AUDIOBOOK", userId?: number | string) => {
+  return await getAdapter().playlist.getPlaylists(type, userId);
 };
 
-export const getPlaylistById = async (id: number) => {
-  return await request.get<any, ISuccessResponse<Playlist>>(`/playlists/${id}`);
+export const getPlaylistById = async (id: number | string) => {
+  return await getAdapter().playlist.getPlaylistById(id);
 };
 
-export const updatePlaylist = async (id: number, name: string) => {
-  return await request.put<any, ISuccessResponse<Playlist>>(`/playlists/${id}`, { name });
+export const updatePlaylist = async (id: number | string, name: string) => {
+  return await getAdapter().playlist.updatePlaylist(id, name);
 };
 
-export const deletePlaylist = async (id: number) => {
-  return await request.delete<any, ISuccessResponse<boolean>>(`/playlists/${id}`);
+export const deletePlaylist = async (id: number | string) => {
+  return await getAdapter().playlist.deletePlaylist(id);
 };
 
-export const addTrackToPlaylist = async (playlistId: number, trackId: number) => {
-  return await request.post<any, ISuccessResponse<boolean>>(`/playlists/${playlistId}/tracks`, { trackId });
+export const addTrackToPlaylist = async (playlistId: number | string, trackId: number | string) => {
+  return await getAdapter().playlist.addTrackToPlaylist(playlistId, trackId);
 };
 
-export const addTracksToPlaylist = async (playlistId: number, trackIds: number[]) => {
-  return await request.post<any, ISuccessResponse<boolean>>(`/playlists/${playlistId}/tracks/batch`, { trackIds });
+export const addTracksToPlaylist = async (playlistId: number | string, trackIds: (number | string)[]) => {
+  return await getAdapter().playlist.addTracksToPlaylist(playlistId, trackIds);
 };
 
-export const removeTrackFromPlaylist = async (playlistId: number, trackId: number) => {
-  return await request.delete<any, ISuccessResponse<boolean>>(`/playlists/${playlistId}/tracks/${trackId}`);
+export const removeTrackFromPlaylist = async (playlistId: number | string, trackId: number | string) => {
+  return await getAdapter().playlist.removeTrackFromPlaylist(playlistId, trackId);
 };

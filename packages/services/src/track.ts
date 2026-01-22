@@ -1,6 +1,6 @@
 import { getAdapter } from "./adapter/manager";
 import type {
-    Track
+  Track
 } from "./models";
   
   export const getTrackList = () => {
@@ -25,15 +25,15 @@ import type {
     return getAdapter().track.createTrack(data);
   };
   
-  export const updateTrack = (id: number, data: Partial<Track>) => {
+  export const updateTrack = (id: number | string, data: Partial<Track>) => {
     return getAdapter().track.updateTrack(id, data);
   };
   
-  export const deleteTrack = (id: number, deleteAlbum: boolean = false) => {
+  export const deleteTrack = (id: number | string, deleteAlbum: boolean = false) => {
     return getAdapter().track.deleteTrack(id, deleteAlbum);
   };
   
-  export const getDeletionImpact = (id: number) => {
+  export const getDeletionImpact = (id: number | string) => {
     return getAdapter().track.getDeletionImpact(id);
   };
   
@@ -41,7 +41,7 @@ import type {
     return getAdapter().track.batchCreateTracks(data);
   };
   
-  export const batchDeleteTracks = (ids: number[]) => {
+  export const batchDeleteTracks = (ids: (number | string)[]) => {
     return getAdapter().track.batchDeleteTracks(ids);
   };
   
@@ -51,4 +51,16 @@ import type {
   
   export const getTracksByArtist = (artist: string) => {
     return getAdapter().track.getTracksByArtist(artist);
+  };
+  
+  export const toggleTrackLike = (id: number | string, userId: number | string) => {
+    return getAdapter().track.toggleLike(id, userId);
+  };
+  
+  export const toggleTrackUnLike = (id: number | string, userId: number | string) => {
+    return getAdapter().track.toggleUnLike(id, userId);
+  };
+
+  export const getFavoriteTracks = (userId: number | string, loadCount: number, pageSize: number, type?: string) => {
+    return getAdapter().track.getFavoriteTracks(userId, loadCount, pageSize, type);
   };
