@@ -183,6 +183,8 @@ const Detail: React.FC = () => {
     fetchTracks(id, 0, sort, keyword);
   };
 
+  console.log("tracks", tracks);
+
   return (
     <div
       className={styles.detailContainer}

@@ -2,23 +2,23 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { addAlbumToHistory, addToHistory, getLatestHistory, reportAudiobookProgress } from "@soundx/services";
 import * as Device from "expo-device";
 import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
+    createContext,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
 } from "react";
 import { Alert, Platform } from "react-native";
 import TrackPlayer, {
-  AppKilledPlaybackBehavior,
-  Capability,
-  Event,
-  IOSCategory,
-  IOSCategoryMode,
-  IOSCategoryOptions,
-  State,
-  useProgress,
-  useTrackPlayerEvents,
+    AppKilledPlaybackBehavior,
+    Capability,
+    Event,
+    IOSCategory,
+    IOSCategoryMode,
+    IOSCategoryOptions,
+    State,
+    useProgress,
+    useTrackPlayerEvents,
 } from "react-native-track-player";
 import { Track, TrackType } from "../models";
 import { socketService } from "../services/socket";

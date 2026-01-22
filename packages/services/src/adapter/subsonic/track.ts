@@ -22,7 +22,7 @@ export class SubsonicTrackAdapter implements ITrackAdapter {
     // Subsonic doesn't have a direct "get all tracks" efficiently.
     // We'll return random songs as a default list.
     const res = await this.client.get<SubsonicRandomSongs>("getRandomSongs", { size: 50 });
-    const tracks = (res.randomSongs?.song || []).map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id)));
+    const tracks = (res.randomSongs?.song || []).map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id), (id) => this.client.getStreamUrl(id)));
     return this.response(tracks);
   }
 
@@ -88,14 +88,14 @@ export class SubsonicTrackAdapter implements ITrackAdapter {
   async getLatestTracks(type?: string, random?: boolean, pageSize?: number) {
       // type is often "music" or "audiobook".
       const res = await this.client.get<SubsonicRandomSongs>("getRandomSongs", { size: pageSize || 20 });
-      const tracks = (res.randomSongs?.song || []).map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id)));
+      const tracks = (res.randomSongs?.song || []).map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id), (id) => this.client.getStreamUrl(id)));
       return this.response(tracks);
   }
 
   async getTracksByArtist(artist: string) {
     // search3
     const res = await this.client.get<{searchResult3: { song: SubsonicChild[] }}>("search3", { query: artist, songCount: 50 });
-    const tracks = (res.searchResult3?.song || []).map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id)));
+    const tracks = (res.searchResult3?.song || []).map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id), (id) => this.client.getStreamUrl(id)));
     return this.response(tracks);
   }
 
@@ -114,7 +114,7 @@ export class SubsonicTrackAdapter implements ITrackAdapter {
     const tracks = (res.starred?.song || [])
       .slice(loadCount, loadCount + pageSize)
       .map(s => ({
-        track: mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id)),
+        track: mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id), (id) => this.client.getStreamUrl(id)),
         createdAt: s.starred || s.created || new Date().toISOString()
       }));
     
@@ -125,5 +125,23 @@ export class SubsonicTrackAdapter implements ITrackAdapter {
         total: res.starred?.song?.length || 0,
         hasMore: loadCount + tracks.length < (res.starred?.song?.length || 0)
     });
+  }
+
+  async getLyrics(id: number | string) {
+    const res = await this.client.get<{ song: SubsonicChild }>("getSong", { id: id.toString() });
+    const song = res.song;
+    if (!song) return this.response(null);
+    
+    // Subsonic getLyrics typically uses artist and title.
+    const lyricsRes = await this.client.get<{ lyrics: any }>("getLyrics", {
+      artist: song.artist,
+      title: song.title
+    });
+    
+    // Subsonic JSON format for lyrics can vary: { lyrics: { value: "..." } } or { lyrics: { "$": "..." } }
+    const lyricsData = lyricsRes.lyrics;
+    const lyrics = lyricsData?.value || lyricsData?.["$"] || (typeof lyricsData === 'string' ? lyricsData : null);
+    
+    return this.response(lyrics);
   }
 }

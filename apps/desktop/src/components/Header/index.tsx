@@ -15,7 +15,7 @@ import {
   SearchOutlined,
   SettingOutlined,
   SkinOutlined,
-  SunOutlined
+  SunOutlined,
 } from "@ant-design/icons";
 import {
   addSearchRecord,
@@ -47,6 +47,7 @@ import { useMessage } from "../../context/MessageContext";
 import { useTheme } from "../../context/ThemeContext";
 import { TrackType } from "../../models";
 import { useAuthStore } from "../../store/auth";
+import { isSubsonicSource } from "../../utils";
 import { isWindows } from "../../utils/platform";
 import { usePlayMode } from "../../utils/playMode";
 import SearchResults from "../SearchResults";
@@ -338,23 +339,28 @@ const Header: React.FC = () => {
 
       {/* User Actions */}
       <div className={styles.userActions}>
-        <Tooltip
-          title={
-            playMode === TrackType.MUSIC ? "切换至有声书模式" : "切换至音乐模式"
-          }
-        >
-          <div
-            onClick={togglePlayMode}
-            className={styles.actionIcon}
-            style={actionIconStyle}
+        {!isSubsonicSource() && (
+          <Tooltip
+            title={
+              playMode === TrackType.MUSIC
+                ? "切换至有声书模式"
+                : "切换至音乐模式"
+            }
           >
-            {playMode === TrackType.MUSIC ? (
-              <CustomerServiceOutlined />
-            ) : (
-              <ReadOutlined />
-            )}
-          </div>
-        </Tooltip>
+            <div
+              onClick={togglePlayMode}
+              className={styles.actionIcon}
+              style={actionIconStyle}
+            >
+              {playMode === TrackType.MUSIC ? (
+                <CustomerServiceOutlined />
+              ) : (
+                <ReadOutlined />
+              )}
+            </div>
+          </Tooltip>
+        )}
+
         <Tooltip title="mini播放器">
           <ImportOutlined
             className={styles.actionIcon}

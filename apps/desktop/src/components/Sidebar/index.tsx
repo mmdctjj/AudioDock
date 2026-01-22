@@ -15,6 +15,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMessage } from "../../context/MessageContext";
 import { useAuthStore } from "../../store/auth";
+import { isSubsonicSource } from "../../utils";
 import { usePlayMode } from "../../utils/playMode";
 import styles from "./index.module.less";
 
@@ -94,7 +95,7 @@ const Sidebar: React.FC = () => {
         />
         <MenuItem
           icon={<AppstoreOutlined />}
-          text="分类"
+          text="专辑"
           onClick={() => navigate("/category")}
           active={isActive("/category")}
         />
@@ -104,12 +105,14 @@ const Sidebar: React.FC = () => {
           onClick={() => navigate("/artists")}
           active={isActive("/artists")}
         />
-        <MenuItem
-          icon={<FolderOutlined />}
-          text="文件夹"
-          onClick={() => navigate("/folders")}
-          active={isActive("/folders")}
-        />
+        {!isSubsonicSource() && (
+          <MenuItem
+            icon={<FolderOutlined />}
+            text="文件夹"
+            onClick={() => navigate("/folders")}
+            active={isActive("/folders")}
+          />
+        )}
       </div>
 
       <div className={styles.playlistHeader}>
@@ -132,12 +135,14 @@ const Sidebar: React.FC = () => {
           onClick={() => navigate("/favorites")}
           active={isActive("/favorites")}
         />
-        <MenuItem
-          icon={<SoundOutlined />}
-          text="听过"
-          onClick={() => navigate("/listened")}
-          active={isActive("/listened")}
-        />
+        {!isSubsonicSource() && (
+          <MenuItem
+            icon={<SoundOutlined />}
+            text="听过"
+            onClick={() => navigate("/listened")}
+            active={isActive("/listened")}
+          />
+        )}
 
         {/* Dynamic Playlists */}
         {playlists.map((playlist) => (

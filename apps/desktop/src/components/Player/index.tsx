@@ -21,7 +21,7 @@ import {
   getDeletionImpact,
   getLatestHistory,
   getPlaylists,
-  type Playlist,
+  type Playlist
 } from "@soundx/services";
 import {
   Avatar, // Added
@@ -1005,7 +1005,7 @@ const Player: React.FC = () => {
     }
   };
 
-  const handleAddToPlaylist = async (playlistId: number) => {
+  const handleAddToPlaylist = async (playlistId: number | string) => {
     if (!selectedTrack) return;
     try {
       const res = await addTrackToPlaylist(playlistId, selectedTrack.id);

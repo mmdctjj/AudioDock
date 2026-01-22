@@ -117,7 +117,7 @@ export class SubsonicAlbumAdapter implements IAlbumAdapter {
     // minimal sort support
     // pagination
     songs = songs.slice(skip, skip + pageSize);
-    const list = songs.map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id)));
+    const list = songs.map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id), (id) => this.client.getStreamUrl(id)));
     
     return this.response({
         list,

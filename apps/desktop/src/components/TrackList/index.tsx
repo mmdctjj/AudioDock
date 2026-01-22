@@ -141,7 +141,7 @@ const TrackList: React.FC<TrackListProps> = ({
     }
   };
 
-  const handleAddToPlaylist = async (playlistId: number) => {
+  const handleAddToPlaylist = async (playlistId: number | string) => {
     if (!selectedTrack) return;
     try {
       const res = await addTrackToPlaylist(playlistId, selectedTrack.id);

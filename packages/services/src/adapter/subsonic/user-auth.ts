@@ -2,8 +2,6 @@ import { getServiceConfig } from "../../config";
 import { ISuccessResponse, User } from "../../models";
 import { IAuthAdapter, IUserAdapter } from "../interface-user-auth";
 import { SubsonicClient } from "./client";
-import { mapSubsonicSongToTrack } from "./mapper";
-import { SubsonicChild } from "./types";
 
 export class SubsonicUserAdapter implements IUserAdapter {
     constructor(private client: SubsonicClient) {}
@@ -37,13 +35,6 @@ export class SubsonicUserAdapter implements IUserAdapter {
      });
   }
 
-  async getFavoriteTracks(userId: number | string, loadCount: number, pageSize: number, type?: string) {
-    const res = await this.client.get<{starred: { song: SubsonicChild[] }}>("getStarred");
-    const tracks = (res.starred?.song || []).map(s => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id)));
-    return this.response({
-        pageSize, list: tracks, total: tracks.length, hasMore: false, loadCount: tracks.length
-    });
-  }
 
   async getTrackHistory(userId: number | string, loadCount: number, pageSize: number, type?: string) {
      // getNowPlaying? or we can't get history really?

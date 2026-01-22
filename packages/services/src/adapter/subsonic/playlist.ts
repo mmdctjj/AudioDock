@@ -1,6 +1,7 @@
 import { ISuccessResponse, Playlist, TrackType } from "../../models";
 import { IPlaylistAdapter } from "../interface";
 import { SubsonicClient } from "./client";
+import { mapSubsonicSongToTrack } from "./mapper";
 
 export class SubsonicPlaylistAdapter implements IPlaylistAdapter {
   constructor(private client: SubsonicClient) {}
@@ -21,8 +22,6 @@ export class SubsonicPlaylistAdapter implements IPlaylistAdapter {
   async getPlaylists(type?: "MUSIC" | "AUDIOBOOK", userId?: number | string): Promise<ISuccessResponse<Playlist[]>> {
     const res = await this.client.get<{ playlists: { playlist: any[] } }>("getPlaylists");
     const list = (res.playlists?.playlist || []).map(p => this.mapPlaylist(p));
-    // Subsonic doesn't filter by type in API easily, maybe filter here?
-    // Music vs Audiobook usually depends on how user organizes.
     return this.response(list);
   }
 
@@ -33,7 +32,6 @@ export class SubsonicPlaylistAdapter implements IPlaylistAdapter {
 
   async updatePlaylist(id: number | string, name: string): Promise<ISuccessResponse<Playlist>> {
     await this.client.get("updatePlaylist", { playlistId: id.toString(), name });
-    // Fetch refreshed
     return await this.getPlaylistById(id);
   }
 
@@ -48,11 +46,6 @@ export class SubsonicPlaylistAdapter implements IPlaylistAdapter {
   }
 
   async addTracksToPlaylist(playlistId: number | string, trackIds: (number | string)[]): Promise<ISuccessResponse<boolean>> {
-    // Subsonic updatePlaylist can take multiple songIdToAdd parameters?
-    // The documentation says "songIdToAdd: Add this song to the playlist. Can be used more than once."
-    // SubsonicClient.get/post doesn't support multiple same-key params in object easily if using Axios params.
-    // We should probably iterate or find a way.
-    // For now, iterate:
     for (const tid of trackIds) {
         await this.addTrackToPlaylist(playlistId, tid);
     }
@@ -60,11 +53,6 @@ export class SubsonicPlaylistAdapter implements IPlaylistAdapter {
   }
 
   async removeTrackFromPlaylist(playlistId: number | string, trackId: number | string): Promise<ISuccessResponse<boolean>> {
-    // updatePlaylist: songIndexToRemove: Remove the song at this position in the playlist. Can be used more than once.
-    // Subsonic doesn't allow removing by ID easily, you have to find index?
-    // Wait, Subsonic API updatePlaylist songIndexToRemove.
-    // This is hard if we don't know the index.
-    // Alternative: fetch playlist, find index of trackId, then remove.
     const res = await this.client.get<{ playlist: { entry: any[] } }>("getPlaylist", { id: playlistId.toString() });
     const entries = res.playlist?.entry || [];
     const index = entries.findIndex(e => e.id === trackId.toString());
@@ -76,15 +64,18 @@ export class SubsonicPlaylistAdapter implements IPlaylistAdapter {
   }
 
   private mapPlaylist(p: any): Playlist {
+    const tracks = (p.entry || []).map((s: any) => mapSubsonicSongToTrack(s, (id) => this.client.getCoverUrl(id), (id) => this.client.getStreamUrl(id)));
+    
     return {
       id: p.id,
       name: p.name,
-      type: TrackType.MUSIC, // Default
-      userId: 0, // Not available
+      type: TrackType.MUSIC, 
+      userId: 0, 
       createdAt: p.created,
       updatedAt: p.changed,
+      tracks: tracks,
       _count: {
-        tracks: p.songCount || 0
+        tracks: p.songCount || tracks.length || 0
       }
     } as any;
   }

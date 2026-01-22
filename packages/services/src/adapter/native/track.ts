@@ -97,4 +97,8 @@ export class NativeTrackAdapter implements ITrackAdapter {
       params: { pageSize, loadCount: loadCount, userId, lastId: loadCount, type },
     });
   }
+
+  getLyrics(id: number | string) {
+    return request.get<any, ISuccessResponse<string | null>>(`/track/${id}/lyrics`);
+  }
 }

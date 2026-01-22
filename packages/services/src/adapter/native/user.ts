@@ -33,11 +33,6 @@ export class NativeUserAdapter implements IUserAdapter {
     });
   }
 
-  getFavoriteTracks(userId: number | string, loadCount: number, pageSize: number, type?: string) {
-    return request.get<any, ISuccessResponse<ILoadMoreData<any>>>("/user-track-likes/load-more", {
-      params: { pageSize, loadCount: loadCount, userId, lastId: loadCount, type },
-    });
-  }
 
   getTrackHistory(userId: number | string, loadCount: number, pageSize: number, type?: string) {
     return request.get<any, ISuccessResponse<ILoadMoreData<any>>>("/user-track-histories/load-more", {

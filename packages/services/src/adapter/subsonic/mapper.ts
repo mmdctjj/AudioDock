@@ -1,11 +1,15 @@
 import { Album, Artist, Track, TrackType } from "../../models";
 import { SubsonicAlbum, SubsonicArtist, SubsonicChild } from "./types";
 
-export const mapSubsonicSongToTrack = (song: SubsonicChild, coverUrlBuilder: (id: string) => string): Track => {
+export const mapSubsonicSongToTrack = (
+  song: SubsonicChild, 
+  coverUrlBuilder: (id: string) => string,
+  streamUrlBuilder: (id: string) => string
+): Track => {
   return {
     id: song.id || 0,
     name: song.title,
-    path: song.path || "",
+    path: streamUrlBuilder(song.id),
     artist: song.artist || "Unknown Artist",
     artistEntity: {
         id: song.artistId as string,

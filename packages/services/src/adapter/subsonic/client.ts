@@ -71,6 +71,13 @@ export class SubsonicClient {
          return `${this.buildUrl(this.getBaseUrl(), "getCoverArt")}?${query.toString()}`;
     }
 
+    public getStreamUrl(id: string | number) {
+         const auth = this.getAuthParams() as any;
+         const query = new URLSearchParams(auth);
+         query.append("id", id.toString());
+         return `${this.buildUrl(this.getBaseUrl(), "stream")}?${query.toString()}`;
+    }
+
     public async get<T>(endpoint: string, params: any = {}): Promise<T> {
         const authParams = this.getAuthParams();
         const baseURL = this.getBaseUrl();

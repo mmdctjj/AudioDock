@@ -64,3 +64,7 @@ import type {
   export const getFavoriteTracks = (userId: number | string, loadCount: number, pageSize: number, type?: string) => {
     return getAdapter().track.getFavoriteTracks(userId, loadCount, pageSize, type);
   };
+  
+  export const getTrackLyrics = (id: number | string) => {
+    return getAdapter().track.getLyrics(id);
+  };

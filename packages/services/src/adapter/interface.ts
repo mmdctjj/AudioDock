@@ -15,6 +15,7 @@ export interface ITrackAdapter {
   toggleLike(id: number | string, userId: number | string): Promise<ISuccessResponse<any>>;
   toggleUnLike(id: number | string, userId: number | string): Promise<ISuccessResponse<any>>;
   getFavoriteTracks(userId: number | string, loadCount: number, pageSize: number, type?: string): Promise<ISuccessResponse<ILoadMoreData<{ track: Track, createdAt: string | Date }>>>;
+  getLyrics(id: number | string): Promise<ISuccessResponse<string | null>>;
 }
 
 export interface IAlbumAdapter {
