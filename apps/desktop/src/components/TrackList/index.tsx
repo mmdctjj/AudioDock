@@ -194,7 +194,7 @@ const TrackList: React.FC<TrackListProps> = ({
           {
             title: "#",
             key: "index",
-            width: 50,
+            width: 70,
             render: (_: any, __: Track, index: number) => (
               <Text>{index + 1}</Text>
             ),

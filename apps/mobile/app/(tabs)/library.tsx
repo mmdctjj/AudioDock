@@ -1,23 +1,24 @@
 import { AlphabetSidebar } from "@/src/components/AlphabetSidebar";
+import { CachedImage } from "@/src/components/CachedImage";
 import { groupAndSort, SectionData } from "@/src/utils/pinyin";
 import { Ionicons } from "@expo/vector-icons";
-import { getArtistList, loadMoreAlbum } from "@soundx/services";
+import { getArtistList, loadMoreAlbum, loadMoreTrack } from "@soundx/services";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    SectionList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  SectionList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
+import { usePlayer } from "../../src/context/PlayerContext";
 import { useTheme } from "../../src/context/ThemeContext";
-import { Album, Artist } from "../../src/models";
+import { Album, Artist, Track } from "../../src/models";
 import { getImageUrl } from "../../src/utils/image";
 import { usePlayMode } from "../../src/utils/playMode";
 
@@ -32,6 +33,140 @@ const chunkArray = <T,>(array: T[], size: number): T[][] => {
     result.push(array.slice(i, i + size));
   }
   return result;
+};
+
+const SongList = () => {
+  const { colors } = useTheme();
+  const { mode } = usePlayMode();
+  const { playTrackList } = usePlayer();
+  const [sections, setSections] = useState<SectionData<Track[]>[]>([]);
+  const [loading, setLoading] = useState(true);
+  const sectionListRef = useRef<SectionList>(null);
+
+  // Use List layout for Songs instead of Grid, usually songs are list.
+  // Unless we want grid? The user said "All Songs displayed".
+  // Existing lists (Artist, Album) are Grid. 
+  // Songs usually are better in list view with title, artist, album.
+  // But let's follow the data structure logic with alphabet sidebar.
+
+  useEffect(() => {
+    loadTracks();
+  }, [mode]);
+
+  const loadTracks = async () => {
+    try {
+      setLoading(true);
+      // Fetch all tracks (limit 2000 for now?)
+      const res = await loadMoreTrack({
+        pageSize: 2000, // Load more for songs
+        loadCount: 0,
+        type: mode, // Pass type
+      });
+
+      if (res.code === 200 && res.data) {
+        const { list } = res.data;
+        const tracks = list.map((item: any) => item.track ? item.track : item); // Handle if wrap or not, native adapter returns ILoadMoreData<Track> which usually is list of Track? 
+        // Wait, NativeTrackAdapter.loadMoreTrack returns ILoadMoreData<Track> which has list: Track[].
+        // BUT getFavoriteTracks returns list: {track, createdAt}[].
+        // Let's check NativeTrackAdapter implementation of loadMoreTrack again. 
+        // return request.get<any, ISuccessResponse<ILoadMoreData<Track>>> ...
+        // ILoadMoreData<T> has list: T[]. So it is Track[].
+
+        const grouped = groupAndSort(tracks, (item) => item.name);
+        
+        // For Songs, we probably don't want chunked grid, just list.
+        // So we keep data as is, but we need to map it to match SectionList expected format if NOT grid?
+        // The existing sections logic for Artist/Album does `chunkArray` because renderItem renders a ROW of items.
+        // If I want a simple list, I don't need chunkArray.
+        // However, the `AlphabetSidebar` expects `sections` structure.
+        setSections(grouped as any);
+      }
+    } catch (error) {
+      console.error("Failed to load tracks:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleScrollToSection = (sectionIndex: number) => {
+    if (sectionListRef.current && sections.length > 0) {
+      sectionListRef.current.scrollToLocation({
+        sectionIndex,
+        itemIndex: 0,
+        animated: false,
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <ActivityIndicator
+        size="large"
+        color={colors.primary}
+        style={{ marginTop: 20 }}
+      />
+    );
+  }
+
+  return (
+    <View style={styles.listContainer}>
+      <SectionList
+        ref={sectionListRef}
+        sections={sections}
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+        keyExtractor={(item, index) => item.id.toString()}
+        renderSectionHeader={({ section: { title } }) => (
+          <View
+            style={[
+              styles.sectionHeader,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <Text style={[styles.sectionHeaderText, { color: colors.primary }]}>
+              {title}
+            </Text>
+          </View>
+        )}
+        renderItem={({ item }) => {
+            const track = item as unknown as Track; // Type assertion needed because of section data typing
+            return (
+              <TouchableOpacity
+                style={styles.songItem}
+                onPress={() => {
+                   // Play this track context
+                   // We need a list of tracks.
+                   // Construct list from all sections?
+                   const allTracks = sections.flatMap(s => s.data) as unknown as Track[];
+                   const index = allTracks.findIndex(t => t.id === track.id);
+                   playTrackList(allTracks, index);
+                }}
+              >
+                  <CachedImage
+                    source={{
+                       uri: getImageUrl(track.cover, `https://picsum.photos/seed/${track.id}/100/100`),
+                    }}
+                    style={styles.songImage}
+                  />
+                  <View style={styles.songInfo}>
+                      <Text style={[styles.songTitle, { color: colors.text }]} numberOfLines={1}>{track.name}</Text>
+                      <Text style={[styles.songArtist, { color: colors.secondary }]} numberOfLines={1}>{track.artist} · {track.album}</Text>
+                  </View>
+              </TouchableOpacity>
+            );
+        }}
+        initialNumToRender={20}
+        maxToRenderPerBatch={20}
+        windowSize={10}
+        stickySectionHeadersEnabled={false}
+      />
+      <AlphabetSidebar
+        sections={sections.map((s) => s.title)}
+        onSelect={(section, index) => handleScrollToSection(index)}
+      />
+    </View>
+  );
 };
 
 const ArtistList = () => {
@@ -129,7 +264,7 @@ const ArtistList = () => {
                 style={{ width: itemWidth }}
                 onPress={() => router.push(`/artist/${item.id}`)}
               >
-                <Image
+                <CachedImage
                   source={{
                     uri: getImageUrl(item.avatar, `https://picsum.photos/seed/${item.id}/200/200`),
                   }}
@@ -274,7 +409,7 @@ const AlbumList = () => {
                     { width: itemWidth, height: itemWidth },
                   ]}
                 >
-                  <Image
+                  <CachedImage
                     source={{
                       uri: getImageUrl(item.cover, `https://picsum.photos/seed/${item.id}/200/200`),
                     }}
@@ -341,8 +476,21 @@ export default function LibraryScreen() {
   const router = useRouter();
   const { mode, setMode } = usePlayMode();
   const { sourceType } = useAuth();
+  const { playTrackList } = usePlayer();
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<"artists" | "albums">("artists");
+  const [activeTab, setActiveTab] = useState<"songs" | "artists" | "albums">("artists");
+  
+  useEffect(() => {
+      // If we are in MUSIC mode, default to songs? Or keep artists?
+      // User said "Songs tab (only visible in music mode), select to show all songs, position before artist"
+      // So if mode is MUSIC, we might want to default to songs or let user switch.
+      // Keeping "artists" as default might be fine, or switch if current tab is invalid.
+      if (mode === "AUDIOBOOK" && activeTab === "songs") {
+          setActiveTab("artists");
+      } else {
+          setActiveTab("songs");
+      }
+  }, [mode]);
 
   return (
     <View
@@ -354,6 +502,30 @@ export default function LibraryScreen() {
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>声仓</Text>
         <View style={styles.headerRight}>
+          {mode === "MUSIC" && activeTab === "songs" && (
+            <TouchableOpacity
+              onPress={async () => {
+                const res = await loadMoreTrack({
+                  pageSize: 2000,
+                  loadCount: 0,
+                  type: "MUSIC",
+                });
+                if (res.code === 200 && res.data) {
+                  const list = res.data.list;
+                  const tracks = list.map((item: any) =>
+                    item.track ? item.track : item
+                  );
+                  playTrackList(tracks, 0);
+                }
+              }}
+              style={[
+                styles.iconButton,
+                { backgroundColor: colors.card, marginRight: 12 },
+              ]}
+            >
+              <Ionicons name="play" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             onPress={() => router.push("/folder" as any)}
             style={[
@@ -394,6 +566,29 @@ export default function LibraryScreen() {
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
+          {mode === "MUSIC" && (
+            <TouchableOpacity
+              style={[
+                styles.segmentItem,
+                activeTab === "songs" && { backgroundColor: colors.primary },
+              ]}
+              onPress={() => setActiveTab("songs")}
+            >
+              <Text
+                style={[
+                  styles.segmentText,
+                  {
+                    color:
+                      activeTab === "songs"
+                        ? colors.background
+                        : colors.secondary,
+                  },
+                ]}
+              >
+                单曲
+              </Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[
               styles.segmentItem,
@@ -439,7 +634,7 @@ export default function LibraryScreen() {
         </View>
       </View>
 
-      {activeTab === "artists" ? <ArtistList /> : <AlbumList />}
+      {activeTab === "songs" ? <SongList /> : activeTab === "artists" ? <ArtistList /> : <AlbumList />}
     </View>
   );
 }
@@ -552,5 +747,30 @@ const styles = StyleSheet.create({
   },
   albumArtist: {
     fontSize: 12,
+  },
+  songItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 0,
+  },
+  songImage: {
+      width: 48,
+      height: 48,
+      borderRadius: 8,
+      backgroundColor: '#f0f0f0',
+      marginRight: 12,
+  },
+  songInfo: {
+      flex: 1,
+      justifyContent: 'center',
+  },
+  songTitle: {
+      fontSize: 16,
+      fontWeight: '500',
+      marginBottom: 2,
+  },
+  songArtist: {
+      fontSize: 13,
   },
 });

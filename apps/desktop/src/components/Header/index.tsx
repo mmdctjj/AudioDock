@@ -2,12 +2,12 @@ import {
   CustomerServiceOutlined,
   DatabaseOutlined,
   DeleteOutlined,
+  FolderOutlined,
   GithubOutlined,
   HeartOutlined,
   ImportOutlined,
   LeftOutlined,
   LogoutOutlined,
-  MoonOutlined,
   ReadOutlined,
   ReloadOutlined,
   RetweetOutlined,
@@ -15,8 +15,6 @@ import {
   RollbackOutlined,
   SearchOutlined,
   SettingOutlined,
-  SkinOutlined,
-  SunOutlined,
 } from "@ant-design/icons";
 import {
   addSearchRecord,
@@ -47,7 +45,7 @@ import {
   Segmented,
   theme,
   Tooltip,
-  Typography
+  Typography,
 } from "antd";
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -70,7 +68,7 @@ const ServerSwitcherModal: React.FC<{
   onSelect: (url: string, type: string) => void;
 }> = ({ onSelect }) => {
   const [sourceType, setSourceType] = useState<string>(
-    () => localStorage.getItem("selectedSourceType") || "AudioDock"
+    () => localStorage.getItem("selectedSourceType") || "AudioDock",
   );
   const [history, setHistory] = useState<{ value: string }[]>([]);
   const { token: themeToken } = theme.useToken();
@@ -82,7 +80,7 @@ const ServerSwitcherModal: React.FC<{
       setHistory(JSON.parse(data));
     } else {
       setHistory(
-        sourceType === "AudioDock" ? [{ value: "http://localhost:3000" }] : []
+        sourceType === "AudioDock" ? [{ value: "http://localhost:3000" }] : [],
       );
     }
   }, [sourceType]);
@@ -159,7 +157,7 @@ const Header: React.FC = () => {
   const message = useMessage();
   const navigate = useNavigate();
   const location = useLocation();
-  const { themeSetting, toggleTheme } = useTheme();
+  const {} = useTheme();
   const { token } = theme.useToken();
   const pollTimerRef = useRef<number | null>(null);
   const [modal, contextHolder] = Modal.useModal();
@@ -475,32 +473,21 @@ const Header: React.FC = () => {
             }}
           />
         </Tooltip>
-        <Tooltip title="主题">
-          <SkinOutlined className={styles.actionIcon} style={actionIconStyle} />
-        </Tooltip>
-        <Tooltip
-          title={
-            themeSetting === "dark"
-              ? "切换至亮色模式"
-              : themeSetting === "light"
-                ? "切换至跟随系统"
-                : "切换至暗色模式"
-          }
-        >
-          <div
-            className={styles.actionIcon}
-            style={actionIconStyle}
-            onClick={toggleTheme}
-          >
-            {themeSetting === "dark" ? (
-              <MoonOutlined />
-            ) : themeSetting === "light" ? (
-              <SunOutlined />
-            ) : (
-              <span style={{ fontSize: "12px", fontWeight: "bold" }}>Auto</span>
-            )}
-          </div>
-        </Tooltip>
+
+        {!isSubsonicSource() && (
+          <Tooltip title="文件夹">
+            <div
+              className={styles.actionIcon}
+              style={actionIconStyle}
+              onClick={() => {
+                navigate(`/folders`);
+              }}
+            >
+              <FolderOutlined />
+            </div>
+          </Tooltip>
+        )}
+
         <Tooltip title="切换服务端">
           <div
             className={styles.actionIcon}
@@ -728,8 +715,13 @@ const Header: React.FC = () => {
         centered
       >
         <div style={{ textAlign: "center", padding: "10px 0" }}>
-          <Typography.Text type="secondary" style={{ marginBottom: 16, display: "block" }}>
-            如果您觉得 AudioDock 对您有帮助<br />欢迎赞赏支持！
+          <Typography.Text
+            type="secondary"
+            style={{ marginBottom: 16, display: "block" }}
+          >
+            如果您觉得 AudioDock 对您有帮助
+            <br />
+            欢迎赞赏支持！
           </Typography.Text>
           <img
             src={ctjj}

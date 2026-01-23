@@ -1,6 +1,6 @@
 import { getAdapter } from "./adapter/manager";
 import type {
-  Track
+    Track
 } from "./models";
   
   export const getTrackList = () => {
@@ -17,6 +17,7 @@ import type {
   export const loadMoreTrack = (params: {
     pageSize: number;
     loadCount: number;
+    type?: string;
   }) => {
     return getAdapter().track.loadMoreTrack(params);
   };

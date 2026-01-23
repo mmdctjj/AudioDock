@@ -46,11 +46,25 @@ export const PlaylistModal = () => {
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>("track");
   const [listData, setListData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const flatListRef = React.useRef<FlatList>(null);
 
   useEffect(() => {
     if (showPlaylist && user) {
       if (activeTab === "current") {
         setListData(trackList);
+        // Scroll to current track
+        if (currentTrack) {
+           const index = trackList.findIndex((t) => t.id === currentTrack.id);
+           if (index !== -1) {
+             setTimeout(() => {
+               flatListRef.current?.scrollToIndex({
+                 index,
+                 animated: true,
+                 viewPosition: 0.5,
+               });
+             }, 500);
+           }
+        }
       } else {
         loadTabData();
       }
@@ -272,6 +286,7 @@ export const PlaylistModal = () => {
               </View>
             ) : (
               <FlatList
+                ref={flatListRef}
                 data={listData}
                 keyExtractor={(item, index) => `${item.id}-${index}`}
                 renderItem={renderItem}
@@ -282,6 +297,16 @@ export const PlaylistModal = () => {
                     </Text>
                   </View>
                 }
+                onScrollToIndexFailed={(info) => {
+                  const wait = new Promise((resolve) => setTimeout(resolve, 500));
+                  wait.then(() => {
+                    flatListRef.current?.scrollToIndex({
+                      index: info.index,
+                      animated: true,
+                      viewPosition: 0.5,
+                    });
+                  });
+                }}
               />
             )}
           </View>

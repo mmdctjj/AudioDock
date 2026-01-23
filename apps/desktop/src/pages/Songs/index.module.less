@@ -1,0 +1,50 @@
+.container {
+  flex: 1;
+  overflow-y: auto;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(100px);
+  -webkit-backdrop-filter: blur(100px);
+  padding: 30px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.title {
+  margin: 0 !important;
+}
+
+.refreshButton {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.loadingContainer {
+  margin-left: 0;
+  margin-top: 20px;
+}
+
+.noMore {
+  text-align: center;
+  padding: 20px;
+  opacity: 0.7;
+}
+
+.noData {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  min-height: 200px;
+}

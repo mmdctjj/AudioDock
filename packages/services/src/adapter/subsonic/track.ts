@@ -1,6 +1,6 @@
 import type {
-  ISuccessResponse,
-  Track
+    ISuccessResponse,
+    Track
 } from "../../models";
 import { ITrackAdapter } from "../interface";
 import { SubsonicClient } from "./client";
@@ -91,6 +91,7 @@ export class SubsonicTrackAdapter implements ITrackAdapter {
   async loadMoreTrack(params: {
     pageSize: number;
     loadCount: number;
+    type?: string;
   }) {
      // Similar limitation.
      return this.response({

@@ -1,13 +1,13 @@
 import {
   AppstoreOutlined,
+  AudioOutlined,
   CloudDownloadOutlined,
   CompassOutlined,
   CustomerServiceOutlined,
-  FolderOutlined,
   HeartOutlined,
   PlusOutlined,
   SoundOutlined,
-  TeamOutlined,
+  TeamOutlined
 } from "@ant-design/icons";
 import { createPlaylist, getPlaylists, type Playlist } from "@soundx/services";
 import { Form, Input, Modal, theme, Typography } from "antd";
@@ -105,14 +105,12 @@ const Sidebar: React.FC = () => {
           onClick={() => navigate("/artists")}
           active={isActive("/artists")}
         />
-        {!isSubsonicSource() && (
-          <MenuItem
-            icon={<FolderOutlined />}
-            text="文件夹"
-            onClick={() => navigate("/folders")}
-            active={isActive("/folders")}
-          />
-        )}
+        <MenuItem
+            icon={<AudioOutlined />}
+            text="单曲"
+            onClick={() => navigate("/songs")}
+            active={isActive("/songs")}
+        />
       </div>
 
       <div className={styles.playlistHeader}>

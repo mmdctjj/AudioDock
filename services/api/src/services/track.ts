@@ -119,8 +119,13 @@ export class TrackService {
     });
   }
 
-  async loadMoreTrack(pageSize: number, loadCount: number): Promise<Track[]> {
+  async loadMoreTrack(pageSize: number, loadCount: number, type?: TrackType): Promise<Track[]> {
+    const where: any = {};
+    if (type) {
+      where.type = type;
+    }
     return await this.prisma.track.findMany({
+      where,
       skip: loadCount * pageSize,
       take: pageSize,
       include: {

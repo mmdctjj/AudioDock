@@ -1,19 +1,19 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  Query,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Post,
+    Put,
+    Query,
 } from '@nestjs/common';
 import { Track, TrackType } from '@soundx/db';
 import {
-  IErrorResponse,
-  ILoadMoreData,
-  ISuccessResponse,
-  ITableData,
+    IErrorResponse,
+    ILoadMoreData,
+    ISuccessResponse,
+    ITableData,
 } from 'src/common/const';
 import { Public } from 'src/common/public.decorator';
 import { TrackService } from '../services/track';
@@ -41,22 +41,24 @@ export class TrackController {
 
   @Get('/table-list')
   async getTrackTableList(
-    @Param('pageSize') pageSize: number,
-    @Param('current') current: number,
+    @Query('pageSize') pageSize: any,
+    @Query('current') current: any,
     @Query('type') type?: TrackType,
   ): Promise<ISuccessResponse<ITableData<Track[]>> | IErrorResponse> {
     try {
+      const size = Number(pageSize);
+      const cur = Number(current);
       const trackList = await this.trackService.getTrackTableList(
-        pageSize,
-        current,
+        size,
+        cur,
       );
       const total = await this.trackService.trackCount(type);
       return {
         code: 200,
         message: 'success',
         data: {
-          pageSize,
-          current,
+          pageSize: size,
+          current: cur,
           list: trackList,
           total,
         },
@@ -71,22 +73,25 @@ export class TrackController {
 
   @Get('/load-more')
   async loadMoreTrack(
-    @Param('pageSize') pageSize: number,
-    @Param('loadCount') loadCount: number,
+    @Query('pageSize') pageSize: any,
+    @Query('loadCount') loadCount: any,
     @Query('type') type?: TrackType,
   ): Promise<ISuccessResponse<ILoadMoreData<Track[]>> | IErrorResponse> {
     try {
+      const size = Number(pageSize);
+      const count = Number(loadCount);
       const trackList = await this.trackService.loadMoreTrack(
-        pageSize,
-        loadCount,
+        size,
+        count,
+        type,
       );
       const total = await this.trackService.trackCount(type);
       return {
         code: 200,
         message: 'success',
         data: {
-          pageSize,
-          loadCount,
+          pageSize: size,
+          loadCount: count,
           list: trackList,
           total,
         },

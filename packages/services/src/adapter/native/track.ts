@@ -1,8 +1,8 @@
 import type {
-  ILoadMoreData,
-  ISuccessResponse,
-  ITableData,
-  Track,
+    ILoadMoreData,
+    ISuccessResponse,
+    ITableData,
+    Track,
 } from "../../models";
 import request from "../../request";
 import { ITrackAdapter } from "../interface";
@@ -25,6 +25,7 @@ export class NativeTrackAdapter implements ITrackAdapter {
   loadMoreTrack(params: {
     pageSize: number;
     loadCount: number;
+    type?: string;
   }) {
     return request.get<any, ISuccessResponse<ILoadMoreData<Track>>>(
       "/load-more",
