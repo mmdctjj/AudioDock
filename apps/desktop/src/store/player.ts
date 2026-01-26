@@ -1,4 +1,4 @@
-import { addAlbumToHistory, addToHistory, reportAudiobookProgress, toggleTrackLike, toggleTrackUnLike } from "@soundx/services";
+import { addAlbumToHistory, addToHistory, getLatestTracks, reportAudiobookProgress, toggleTrackLike, toggleTrackUnLike } from "@soundx/services";
 import { create } from "zustand";
 import { TrackType, type Track } from "../models";
 import { getPlayMode } from "../utils/playMode";
@@ -25,12 +25,13 @@ interface PlayerState {
   playMode: "sequence" | "loop" | "shuffle" | "single";
   volume: number;
   activeMode: TrackType;
+  isRadioMode: boolean;
 
   // Persisted States
   modes: Record<TrackType, PlayerModeState>;
 
   // Actions
-  play: (track?: Track, albumId?: number | string, startTime?: number) => void;
+  play: (track?: Track, albumId?: number | string, startTime?: number, fromRadio?: boolean) => void;
   pause: () => void;
   setPlaylist: (tracks: Track[]) => void;
   next: () => void;
@@ -41,6 +42,7 @@ interface PlayerState {
   setDuration: (duration: number) => void;
   toggleLike: (trackId: number | string, type: "like" | "unlike") => Promise<void>;
   removeTrack: (trackId: number | string) => void;
+  startRadioMode: () => Promise<void>;
 
   // Internal/System Actions
   syncActiveMode: (mode: TrackType) => void;
@@ -133,6 +135,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     playMode: storedPlayMode,
     volume: storedVolume,
     activeMode: initialMode,
+    isRadioMode: false,
 
     modes: {
       [TrackType.MUSIC]: initialMusicState,
@@ -196,12 +199,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       });
     },
 
-    play: async (track, albumId, startTime) => {
-      const { currentTrack, currentAlbumId, activeMode } = get();
+    play: async (track, albumId, startTime, fromRadio = false) => {
+      const { currentTrack: current, currentAlbumId, activeMode } = get();
 
-      // If passing a track, logic is complex
       if (track) {
-        if (currentTrack?.id !== track.id) {
+        if (!fromRadio) {
+          set({ isRadioMode: false });
+        }
+        if (current?.id !== track.id) {
           // Report progress of previous track before switching
           reportProgress(get(), true);
           lastReportTime = 0; // Reset for new track
@@ -243,29 +248,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           }
         } else {
           set({ isPlaying: true });
-          // If resuming same track, should we jump to startTime?
-          // Usually play() on same track just resumes. 
-          // But if startTime is provided and > 0, we might want to seek?
-          // For now, let's assume if track is same, we respect existing currentTime unless startTime is explicit?
-          if (startTime !== undefined) {
-            // And audio element will pick it up via useEffect if we implement it there? 
-            // Currently store just sets state. Player component needs to react to currentTime change if it's a seek.
-            // But existing logic: setCurrentTime doesn't seek audio element directly, handleSeek does.
-            // However, handleLoadedMetadata restores it.
-            // Converting this to a seek is hard without ref. 
-            // But if we change track, currentTime resets to 0 (or startTime). 
-            // If track is same, we might need a way to force seek.
-            // But "Resume" implies we are loading the track. 
-            // If track is same, we probably don't need to do anything if it's already there. 
-            // If it's paused, we just play. 
-            // If user clicked "Continue", and we are at 0:00, but history says 10:00, we should jump.
-            if (startTime > 0) {
-              set({ currentTime: startTime });
-            }
+          if (startTime !== undefined && startTime > 0) {
+            set({ currentTime: startTime });
           }
         }
       } else {
-        if (currentTrack) {
+        if (current) {
           set({ isPlaying: true });
         }
       }
@@ -286,7 +274,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     },
 
     setPlaylist: (tracks: Track[]) => {
-      set({ playlist: tracks });
+      set({ playlist: tracks, isRadioMode: false });
       const s = get();
       persistModeState(s.activeMode, {
         ...s, // this spreads too much, but essentially we want current state properties
@@ -298,8 +286,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       } as PlayerModeState);
     },
 
-    next: () => {
-      const { playlist, currentTrack, playMode, activeMode } = get();
+    next: async () => {
+      const { playlist, currentTrack, playMode, activeMode, isRadioMode } = get();
+
+      if (isRadioMode) {
+        try {
+          let res = await getLatestTracks(activeMode, true, 1);
+          if (res.code === 200 && res.data && res.data[0]?.id === currentTrack?.id) {
+            res = await getLatestTracks(activeMode, true, 1);
+          }
+          if (res.code === 200 && res.data && res.data.length > 0) {
+            get().play(res.data[0], undefined, undefined, true);
+          }
+        } catch (e) {
+          console.error("Radio next failed", e);
+        }
+        return;
+      }
+
       if (!currentTrack || playlist.length === 0) return;
 
       const currentIndex = playlist.findIndex((t: Track) => t.id === currentTrack.id);
@@ -338,8 +342,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       } as PlayerModeState);
     },
 
-    prev: () => {
-      const { playlist, currentTrack, activeMode } = get();
+    prev: async () => {
+      const { playlist, currentTrack, activeMode, isRadioMode } = get();
+
+      if (isRadioMode) {
+        get().next();
+        return;
+      }
+
       if (!currentTrack || playlist.length === 0) return;
 
       const currentIndex = playlist.findIndex((t: Track) => t.id === currentTrack.id);
@@ -447,6 +457,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         duration: s.duration,
         currentAlbumId: s.currentAlbumId
       });
+    },
+
+    startRadioMode: async () => {
+      const { activeMode } = get();
+      set({ isRadioMode: true });
+
+      try {
+        const res = await getLatestTracks(activeMode, true, 1);
+        if (res.code === 200 && res.data && res.data.length > 0) {
+          get().play(res.data[0], undefined, undefined, true);
+        }
+      } catch (e) {
+        console.error("Failed to start radio mode", e);
+      }
     }
   };
 });

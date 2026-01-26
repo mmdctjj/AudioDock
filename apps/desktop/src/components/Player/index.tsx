@@ -1,44 +1,44 @@
 import Icon, {
-  BackwardOutlined, // Added as per instruction
-  DeliveredProcedureOutlined,
-  DownOutlined,
-  FontColorsOutlined,
-  ForwardOutlined,
-  HeartFilled,
-  HeartOutlined,
-  OrderedListOutlined,
-  PauseCircleFilled,
-  PlayCircleFilled,
-  SoundOutlined,
-  StepBackwardOutlined,
-  StepForwardOutlined,
-  TeamOutlined,
+    BackwardOutlined, // Added as per instruction
+    DeliveredProcedureOutlined,
+    DownOutlined,
+    FontColorsOutlined,
+    ForwardOutlined,
+    HeartFilled,
+    HeartOutlined,
+    OrderedListOutlined,
+    PauseCircleFilled,
+    PlayCircleFilled,
+    SoundOutlined,
+    StepBackwardOutlined,
+    StepForwardOutlined,
+    TeamOutlined,
 } from "@ant-design/icons";
 import {
-  addToHistory,
-  addTrackToPlaylist,
-  deleteTrack,
-  getDeletionImpact,
-  getLatestHistory,
-  getPlaylists,
-  type Playlist
+    addToHistory,
+    addTrackToPlaylist,
+    deleteTrack,
+    getDeletionImpact,
+    getLatestHistory,
+    getPlaylists,
+    type Playlist
 } from "@soundx/services";
 import {
-  Avatar, // Added
-  Button,
-  Drawer,
-  Flex,
-  InputNumber,
-  List, // Rename to avoid conflict if needed, though useMessage is typically context. Context is safer.
-  Modal,
-  notification, // Added
-  Popover,
-  Slider,
-  Space, // Added
-  Tabs,
-  theme,
-  Tooltip,
-  Typography,
+    Avatar, // Added
+    Button,
+    Drawer,
+    Flex,
+    InputNumber,
+    List, // Rename to avoid conflict if needed, though useMessage is typically context. Context is safer.
+    Modal,
+    notification, // Added
+    Popover,
+    Slider,
+    Space, // Added
+    Tabs,
+    theme,
+    Tooltip,
+    Typography,
 } from "antd";
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -88,6 +88,7 @@ const Player: React.FC = () => {
     toggleLike,
     syncActiveMode,
     removeTrack,
+    isRadioMode,
   } = usePlayerStore();
   const { mode: appMode } = usePlayMode();
   const { user } = useAuthStore();
@@ -1051,133 +1052,139 @@ const Player: React.FC = () => {
     }
   };
 
-  const renderPlayOrderButton = () => (
-    <Popover
-      content={
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "5px",
-            padding: "0px",
-          }}
-        >
+  const renderPlayOrderButton = () => {
+    if (isRadioMode) return null;
+    return (
+      <Popover
+        content={
           <div
-            onClick={() => setMode("sequence")}
             style={{
-              cursor: "pointer",
-              padding: "8px 12px",
-              borderRadius: "4px",
-              backgroundColor:
-                playMode === "sequence"
-                  ? token.colorFillTertiary
-                  : "transparent",
+              display: "flex",
+              flexDirection: "column",
+              gap: "5px",
+              padding: "0px",
             }}
           >
-            <Flex align="center">
-              <Icon
-                component={MusiclistOutlined}
-                style={{ fontSize: "24px", fontWeight: "bold" }}
-              />
-              顺序播放
-            </Flex>
+            <div
+              onClick={() => setMode("sequence")}
+              style={{
+                cursor: "pointer",
+                padding: "8px 12px",
+                borderRadius: "4px",
+                backgroundColor:
+                  playMode === "sequence"
+                    ? token.colorFillTertiary
+                    : "transparent",
+              }}
+            >
+              <Flex align="center">
+                <Icon
+                  component={MusiclistOutlined}
+                  style={{ fontSize: "24px", fontWeight: "bold" }}
+                />
+                顺序播放
+              </Flex>
+            </div>
+            <div
+              onClick={() => setMode("shuffle")}
+              style={{
+                cursor: "pointer",
+                padding: "8px 12px",
+                borderRadius: "4px",
+                backgroundColor:
+                  playMode === "shuffle"
+                    ? token.colorFillTertiary
+                    : "transparent",
+              }}
+            >
+              <Flex align="center">
+                <Icon
+                  component={RandomOutlined}
+                  style={{ fontSize: "24px", fontWeight: "bold" }}
+                />
+                随机播放
+              </Flex>
+            </div>
+            <div
+              onClick={() => setMode("loop")}
+              style={{
+                cursor: "pointer",
+                padding: "8px 12px",
+                borderRadius: "4px",
+                backgroundColor:
+                  playMode === "loop" ? token.colorFillTertiary : "transparent",
+              }}
+            >
+              <Flex align="center">
+                <Icon
+                  component={LoopOutlined}
+                  style={{ fontSize: "24px", fontWeight: "bold" }}
+                />
+                列表循环
+              </Flex>
+            </div>
+            <div
+              onClick={() => setMode("single")}
+              style={{
+                cursor: "pointer",
+                padding: "8px 12px",
+                borderRadius: "4px",
+                backgroundColor:
+                  playMode === "single" ? token.colorFillTertiary : "transparent",
+              }}
+            >
+              <Flex align="center">
+                <Icon
+                  component={SinglecycleOutlined}
+                  style={{ fontSize: "24px", fontWeight: "bold" }}
+                />
+                单曲循环
+              </Flex>
+            </div>
           </div>
-          <div
-            onClick={() => setMode("shuffle")}
-            style={{
-              cursor: "pointer",
-              padding: "8px 12px",
-              borderRadius: "4px",
-              backgroundColor:
-                playMode === "shuffle"
-                  ? token.colorFillTertiary
-                  : "transparent",
-            }}
-          >
-            <Flex align="center">
-              <Icon
-                component={RandomOutlined}
-                style={{ fontSize: "24px", fontWeight: "bold" }}
-              />
-              随机播放
-            </Flex>
-          </div>
-          <div
-            onClick={() => setMode("loop")}
-            style={{
-              cursor: "pointer",
-              padding: "8px 12px",
-              borderRadius: "4px",
-              backgroundColor:
-                playMode === "loop" ? token.colorFillTertiary : "transparent",
-            }}
-          >
-            <Flex align="center">
-              <Icon
-                component={LoopOutlined}
-                style={{ fontSize: "24px", fontWeight: "bold" }}
-              />
-              列表循环
-            </Flex>
-          </div>
-          <div
-            onClick={() => setMode("single")}
-            style={{
-              cursor: "pointer",
-              padding: "8px 12px",
-              borderRadius: "4px",
-              backgroundColor:
-                playMode === "single" ? token.colorFillTertiary : "transparent",
-            }}
-          >
-            <Flex align="center">
-              <Icon
-                component={SinglecycleOutlined}
-                style={{ fontSize: "24px", fontWeight: "bold" }}
-              />
-              单曲循环
-            </Flex>
-          </div>
-        </div>
-      }
-      getPopupContainer={(triggerNode) => triggerNode.parentElement!}
-      trigger="click"
-      placement="top"
-    >
-      <Tooltip title="播放顺序">
-        {playMode === "sequence" ? (
-          <Icon
-            component={MusiclistOutlined}
-            style={{ fontSize: "24px", fontWeight: "bold" }}
-          />
-        ) : playMode === "shuffle" ? (
-          <Icon
-            component={RandomOutlined}
-            style={{ fontSize: "24px", fontWeight: "bold" }}
-          />
-        ) : playMode === "loop" ? (
-          <Icon
-            component={LoopOutlined}
-            style={{ fontSize: "24px", fontWeight: "bold" }}
-          />
-        ) : playMode === "single" ? (
-          <Icon
-            component={SinglecycleOutlined}
-            style={{ fontSize: "24px", fontWeight: "bold" }}
-          />
-        ) : null}
-      </Tooltip>
-    </Popover>
-  );
+        }
+        getPopupContainer={(triggerNode) => triggerNode.parentElement!}
+        trigger="click"
+        placement="top"
+      >
+        <Tooltip title="播放顺序">
+          {playMode === "sequence" ? (
+            <Icon
+              component={MusiclistOutlined}
+              style={{ fontSize: "24px", fontWeight: "bold" }}
+            />
+          ) : playMode === "shuffle" ? (
+            <Icon
+              component={RandomOutlined}
+              style={{ fontSize: "24px", fontWeight: "bold" }}
+            />
+          ) : playMode === "loop" ? (
+            <Icon
+              component={LoopOutlined}
+              style={{ fontSize: "24px", fontWeight: "bold" }}
+            />
+          ) : playMode === "single" ? (
+            <Icon
+              component={SinglecycleOutlined}
+              style={{ fontSize: "24px", fontWeight: "bold" }}
+            />
+          ) : null}
+        </Tooltip>
+      </Popover>
+    );
+  };
 
-  const renderPlaylistButton = (className: string) => (
-    <Tooltip title="播放列表">
-      <OrderedListOutlined
-        onClick={() => setIsPlaylistOpen(true)}
-        className={className}
-      />
-    </Tooltip>
-  );
+  const renderPlaylistButton = (className: string) => {
+    if (isRadioMode) return null;
+    return (
+      <Tooltip title="播放列表">
+        <OrderedListOutlined
+          onClick={() => setIsPlaylistOpen(true)}
+          className={className}
+        />
+      </Tooltip>
+    );
+  };
 
   if (!currentTrack?.id) {
     return <></>;
@@ -1204,12 +1211,14 @@ const Player: React.FC = () => {
         onClick={() => setIsFullPlayerVisible(true)}
       >
         <div className={styles.coverWrapper}>
-          <img
-            src={getCoverUrl(currentTrack)}
-            alt="cover"
-            className={styles.coverImage}
-            onError={(e) => console.error(`[Player] Mini Cover Load Error: ${currentTrack?.cover}`, e)}
-          />
+          {currentTrack && (
+            <img
+              src={getCoverUrl(currentTrack)}
+              alt="cover"
+              className={styles.coverImage}
+              onError={(e) => console.error(`[Player] Mini Cover Load Error: ${currentTrack?.cover}`, e)}
+            />
+          )}
         </div>
         <div className={styles.songDetails}>
           <Text strong ellipsis style={{ maxWidth: 250 }}>
@@ -1320,8 +1329,8 @@ const Player: React.FC = () => {
       </div>
       {/* Volume & Settings */}
       <div className={styles.settings}>
-        {appMode !== TrackType.AUDIOBOOK &&
-          (currentTrack?.likedByUsers?.find(
+        {appMode !== TrackType.AUDIOBOOK && currentTrack &&
+          (currentTrack.likedByUsers?.find(
             (n) => n.userId === (user?.id || 0)
           ) ? (
             <HeartFilled
@@ -1627,8 +1636,8 @@ const Player: React.FC = () => {
             </Flex>
 
             <Flex justify="center" style={{ fontSize: 50 }} gap={30}>
-              {/* {appMode === TrackType.MUSIC &&
-                renderPlayOrderButton(styles.controlIcon)} */}
+              {!isRadioMode && appMode === TrackType.MUSIC &&
+                renderPlayOrderButton()}
 
               {/* Skip Backward 15s */}
               <Tooltip title="后退 15 秒">
@@ -1662,8 +1671,8 @@ const Player: React.FC = () => {
                 />
               </Tooltip>
 
-              {/* {appMode === TrackType.MUSIC &&
-                renderPlaylistButton(styles.controlIcon)} */}
+              {!isRadioMode && appMode === TrackType.MUSIC &&
+                renderPlaylistButton(styles.controlIcon)}
             </Flex>
           </Flex>
         </div>

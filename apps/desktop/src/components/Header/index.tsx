@@ -15,6 +15,7 @@ import {
     RollbackOutlined,
     SearchOutlined,
     SettingOutlined,
+    WifiOutlined,
 } from "@ant-design/icons";
 import {
     addSearchRecord,
@@ -53,6 +54,7 @@ import { useMessage } from "../../context/MessageContext";
 import { useTheme } from "../../context/ThemeContext";
 import { TrackType } from "../../models";
 import { useAuthStore } from "../../store/auth";
+import { usePlayerStore } from "../../store/player";
 import { isSubsonicSource } from "../../utils";
 import { isWindows } from "../../utils/platform";
 import { usePlayMode } from "../../utils/playMode";
@@ -440,6 +442,17 @@ const Header: React.FC = () => {
 
       {/* User Actions */}
       <div className={styles.userActions}>
+        {playMode === TrackType.MUSIC && !isSubsonicSource() && (
+          <Tooltip title="情景电台">
+            <div
+              className={styles.actionIcon}
+              style={actionIconStyle}
+              onClick={() => usePlayerStore.getState().startRadioMode()}
+            >
+              <WifiOutlined />
+            </div>
+          </Tooltip>
+        )}
         {!isSubsonicSource() && (
           <Tooltip
             title={
