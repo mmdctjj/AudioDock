@@ -1,12 +1,17 @@
 import { SettingOutlined, SyncOutlined } from "@ant-design/icons";
-import { getLatestArtists, getLatestTracks, getRecentAlbums, getRecommendedAlbums } from "@soundx/services";
+import {
+  getLatestArtists,
+  getLatestTracks,
+  getRecentAlbums,
+  getRecommendedAlbums,
+} from "@soundx/services";
 import { useDebounceFn } from "ahooks";
 import { Avatar, Button, Col, Flex, Row, Skeleton, Typography } from "antd";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Cover from "../../components/Cover/index";
+import { getBaseURL } from "../../https";
 import type { Album, Artist, Track } from "../../models";
-import { getCoverUrl } from "../../utils";
 import { cacheUtils } from "../../utils/cache";
 import { usePlayMode } from "../../utils/playMode";
 import styles from "./index.module.less";
@@ -47,7 +52,7 @@ const Recommended: React.FC = () => {
     () => {
       loadSections(true); // Bypass cache on resize to get correct count
     },
-    { wait: 500 }
+    { wait: 500 },
   );
 
   useEffect(() => {
@@ -58,7 +63,7 @@ const Recommended: React.FC = () => {
   const getCacheKey = (base: string) => `${base}_${playMode}`;
 
   const sortSections = (
-    sectionsToSort: RecommendedSection[]
+    sectionsToSort: RecommendedSection[],
   ): RecommendedSection[] => {
     try {
       const savedOrder = localStorage.getItem(STORAGE_KEY_ORDER);
@@ -105,16 +110,16 @@ const Recommended: React.FC = () => {
       // Try to get from cache first
       if (!forceRefresh) {
         const cachedRecommended = cacheUtils.get<Album[]>(
-          getCacheKey(CACHE_KEY_RECOMMENDED)
+          getCacheKey(CACHE_KEY_RECOMMENDED),
         );
         const cachedRecent = cacheUtils.get<Album[]>(
-          getCacheKey(CACHE_KEY_RECENT)
+          getCacheKey(CACHE_KEY_RECENT),
         );
         const cachedArtists = cacheUtils.get<Artist[]>(
-          getCacheKey(CACHE_KEY_ARTISTS)
+          getCacheKey(CACHE_KEY_ARTISTS),
         );
         const cachedTracks = cacheUtils.get<Track[]>(
-          getCacheKey(CACHE_KEY_TRACKS)
+          getCacheKey(CACHE_KEY_TRACKS),
         );
 
         if (cachedRecommended && cachedRecent && cachedArtists) {
@@ -269,8 +274,8 @@ const Recommended: React.FC = () => {
   const updateSection = (sectionId: string, items: any[]) => {
     setSections((prev) =>
       prev.map((section) =>
-        section.id === sectionId ? { ...section, items } : section
-      )
+        section.id === sectionId ? { ...section, items } : section,
+      ),
     );
   };
 
@@ -339,7 +344,13 @@ const Recommended: React.FC = () => {
                     style={{ cursor: "pointer", textAlign: "center" }}
                   >
                     <Avatar
-                      src={getCoverUrl(item, item.id)}
+                      src={
+                        item.avatar
+                          ? item.avatar.startsWith("http")
+                            ? item.avatar
+                            : `${getBaseURL()}${item.avatar}`
+                          : `https://picsum.photos/seed/${item.id}/300/300`
+                      }
                       size={120}
                       icon={!item.avatar && item.name[0]}
                     />

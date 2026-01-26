@@ -9,7 +9,7 @@ import {
   SoundOutlined,
   TeamOutlined
 } from "@ant-design/icons";
-import { createPlaylist, getPlaylists, type Playlist } from "@soundx/services";
+import { createPlaylist, getPlaylists, TrackType, type Playlist } from "@soundx/services";
 import { Form, Input, Modal, theme, Typography } from "antd";
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -105,12 +105,16 @@ const Sidebar: React.FC = () => {
           onClick={() => navigate("/artists")}
           active={isActive("/artists")}
         />
-        <MenuItem
-            icon={<AudioOutlined />}
-            text="单曲"
-            onClick={() => navigate("/songs")}
-            active={isActive("/songs")}
-        />
+        {
+          mode === TrackType.MUSIC && (
+            <MenuItem
+              icon={<AudioOutlined />}
+              text="单曲"
+              onClick={() => navigate("/songs")}
+              active={isActive("/songs")}
+            />
+          )
+        }
       </div>
 
       <div className={styles.playlistHeader}>
