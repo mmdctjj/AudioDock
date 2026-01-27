@@ -131,6 +131,9 @@ exports.Prisma.TrackScalarFieldEnum = {
   createdAt: 'createdAt',
   fileModifiedAt: 'fileModifiedAt',
   episodeNumber: 'episodeNumber',
+  fileHash: 'fileHash',
+  status: 'status',
+  trashedAt: 'trashedAt',
   artistId: 'artistId',
   albumId: 'albumId',
   folderId: 'folderId'
@@ -142,14 +145,18 @@ exports.Prisma.AlbumScalarFieldEnum = {
   artist: 'artist',
   cover: 'cover',
   year: 'year',
-  type: 'type'
+  type: 'type',
+  status: 'status',
+  trashedAt: 'trashedAt'
 };
 
 exports.Prisma.ArtistScalarFieldEnum = {
   id: 'id',
   name: 'name',
   avatar: 'avatar',
-  type: 'type'
+  type: 'type',
+  status: 'status',
+  trashedAt: 'trashedAt'
 };
 
 exports.Prisma.UserTrackLikeScalarFieldEnum = {
@@ -259,6 +266,11 @@ exports.Prisma.NullsOrder = {
 exports.TrackType = exports.$Enums.TrackType = {
   MUSIC: 'MUSIC',
   AUDIOBOOK: 'AUDIOBOOK'
+};
+
+exports.FileStatus = exports.$Enums.FileStatus = {
+  ACTIVE: 'ACTIVE',
+  TRASHED: 'TRASHED'
 };
 
 exports.Prisma.ModelName = {

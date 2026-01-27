@@ -12,7 +12,7 @@ export class TrackService {
     this.prisma = new PrismaClient();
   }
 
-  private getFilePath(trackPath: string): string | null {
+  public getFilePath(trackPath: string): string | null {
     if (trackPath.startsWith('/music/')) {
       const musicBaseDir = this.configService.get<string>('MUSIC_BASE_DIR') || './';
       return path.join(path.resolve(musicBaseDir), trackPath.replace('/music/', ''));
@@ -37,12 +37,12 @@ export class TrackService {
   }
 
   async getTrackList(): Promise<Track[]> {
-    return await this.prisma.track.findMany();
+    return await this.prisma.track.findMany({ where: { status: 'ACTIVE' } });
   }
 
   async findByPath(path: string): Promise<Track | null> {
     return await this.prisma.track.findFirst({
-      where: { path },
+      where: { path, status: 'ACTIVE' },
       include: {
         artistEntity: true,
         albumEntity: true,
@@ -63,13 +63,12 @@ export class TrackService {
     const where: any = {
       album: albumName,
       artist: artist,
+      status: 'ACTIVE',
     };
 
     if (keyword) {
       where.name = { contains: keyword };
     }
-
-    console.log("getTracksByAlbum", sort);
 
     const tracks = await this.prisma.track.findMany({
       where,
@@ -96,6 +95,7 @@ export class TrackService {
     const where: any = {
       album: albumName,
       artist: artist,
+      status: 'ACTIVE',
     };
 
     if (keyword) {
@@ -109,6 +109,7 @@ export class TrackService {
 
   async getTrackTableList(pageSize: number, current: number): Promise<Track[]> {
     return await this.prisma.track.findMany({
+      where: { status: 'ACTIVE' },
       skip: (current - 1) * pageSize,
       take: pageSize,
       include: {
@@ -120,7 +121,7 @@ export class TrackService {
   }
 
   async loadMoreTrack(pageSize: number, loadCount: number, type?: TrackType): Promise<Track[]> {
-    const where: any = {};
+    const where: any = { status: 'ACTIVE' };
     if (type) {
       where.type = type;
     }
@@ -137,7 +138,7 @@ export class TrackService {
   }
 
   async trackCount(type?: TrackType): Promise<number> {
-    const where: any = {};
+    const where: any = { status: 'ACTIVE' };
     if (type) {
       where.type = type;
     }
@@ -163,12 +164,13 @@ export class TrackService {
 
     let count = 0;
     if (track.albumId) {
-      count = await this.prisma.track.count({ where: { albumId: track.albumId } });
+      count = await this.prisma.track.count({ where: { albumId: track.albumId, status: 'ACTIVE' } });
     } else if (track.album) {
       count = await this.prisma.track.count({
         where: {
           album: track.album,
-          artist: track.artist
+          artist: track.artist,
+          status: 'ACTIVE'
         }
       });
     }
@@ -185,26 +187,21 @@ export class TrackService {
       await this.deleteFileSafely(track.path);
     }
 
-    // Manual cleanup of relations to avoid P2003 error
     await this.prisma.userTrackLike.deleteMany({ where: { trackId: id } });
     await this.prisma.userTrackHistory.deleteMany({ where: { trackId: id } });
     await this.prisma.userAudiobookLike.deleteMany({ where: { trackId: id } });
     await this.prisma.userAudiobookHistory.deleteMany({ where: { trackId: id } });
-    // Handle album deletion if requested and possible
+
     if (track) {
       const impact = await this.checkDeletionImpact(id);
-      console.log('Impact:', impact);
       if (impact.isLastTrackInAlbum) {
         if (track.albumId) {
-          console.log('Deleting album with ID:', track.albumId);
           await this.prisma.userAlbumLike.deleteMany({ where: { albumId: track.albumId } });
           await this.prisma.userAlbumHistory.deleteMany({ where: { albumId: track.albumId } });
           await this.prisma.album.delete({ where: { id: track.albumId } });
-          console.log('Album deleted successfully：', track.albumId);
         } else if (track.album) {
-          // Find album by name and artist if no albumId
           const album = await this.prisma.album.findFirst({
-            where: { name: track.album, artist: track.artist }
+            where: { name: track.album, artist: track.artist, status: 'ACTIVE' }
           });
           if (album) {
             await this.prisma.userAlbumLike.deleteMany({ where: { albumId: album.id } });
@@ -221,7 +218,6 @@ export class TrackService {
     return true;
   }
 
-  // 批量新增
   async createTracks(tracks: Omit<Track, 'id'>[]): Promise<boolean> {
     const trackList = await this.prisma.track.createMany({
       data: tracks,
@@ -232,7 +228,6 @@ export class TrackService {
     return trackList.count === tracks.length;
   }
 
-  // 批量删除
   async deleteTracks(ids: number[]): Promise<boolean> {
     const tracks = await this.prisma.track.findMany({
       where: { id: { in: ids } },
@@ -241,7 +236,6 @@ export class TrackService {
       await this.deleteFileSafely(track.path);
     }
 
-    // Manual cleanup of relations to avoid P2003 error
     await this.prisma.userTrackLike.deleteMany({ where: { trackId: { in: ids } } });
     await this.prisma.userTrackHistory.deleteMany({ where: { trackId: { in: ids } } });
     await this.prisma.userAudiobookLike.deleteMany({ where: { trackId: { in: ids } } });
@@ -253,12 +247,12 @@ export class TrackService {
     return true;
   }
 
-  // 搜索单曲
   async searchTracks(keyword: string, type?: TrackType, limit: number = 10): Promise<Track[]> {
     const candidates = await this.prisma.track.findMany({
       where: {
         AND: [
           type ? { type } : {},
+          { status: 'ACTIVE' },
           {
             OR: [
               { name: { contains: keyword } },
@@ -306,10 +300,9 @@ export class TrackService {
       .slice(0, limit);
   }
 
-  // 获取最新单曲
   async getLatestTracks(type?: TrackType, limit: number = 8): Promise<Track[]> {
     return await this.prisma.track.findMany({
-      where: type ? { type } : {},
+      where: type ? { type, status: 'ACTIVE' } : { status: 'ACTIVE' },
       take: limit,
       orderBy: { id: 'desc' },
       include: {
@@ -320,14 +313,13 @@ export class TrackService {
     });
   }
 
-  // 获取随机单曲
   async getRandomTracks(type?: TrackType, limit: number = 8): Promise<Track[]> {
     const count = await this.prisma.track.count({
-      where: type ? { type } : {},
+      where: type ? { type, status: 'ACTIVE' } : { status: 'ACTIVE' },
     });
     const skip = Math.max(0, Math.floor(Math.random() * (count - limit)));
     const tracks = await this.prisma.track.findMany({
-      where: type ? { type } : {},
+      where: type ? { type, status: 'ACTIVE' } : { status: 'ACTIVE' },
       skip,
       take: limit,
       include: {
@@ -339,10 +331,9 @@ export class TrackService {
     return tracks.sort(() => Math.random() - 0.5);
   }
 
-  // 根据艺术家获取单曲
   async getTracksByArtist(artist: string): Promise<Track[]> {
     const tracks = await this.prisma.track.findMany({
-      where: { artist },
+      where: { artist, status: 'ACTIVE' },
       orderBy: { id: 'desc' },
       include: {
         artistEntity: true,
@@ -353,17 +344,12 @@ export class TrackService {
     return await this.attachProgressToTracks(tracks, 1);
   }
 
-  // Helper: Attach progress to tracks
   private async attachProgressToTracks(tracks: Track[], userId: number): Promise<Track[]> {
     if (tracks.length === 0) return tracks;
-
-    // Filter for audiobooks only to save DB calls?
-    // Or just look up all? Only Audiobooks have UserAudiobookHistory.
     const audiobookTracks = tracks.filter(t => t.type === 'AUDIOBOOK');
     if (audiobookTracks.length === 0) return tracks;
 
     const trackIds = audiobookTracks.map(t => t.id);
-    console.log('trackIds', trackIds), userId;
     const history = await this.prisma.userAudiobookHistory.findMany({
       where: {
         userId,

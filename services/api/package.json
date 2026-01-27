@@ -37,6 +37,8 @@
     "@nestjs/websockets": "^11.1.9",
     "@soundx/db": "workspace:*",
     "@soundx/utils": "workspace:*",
+    "@types/chokidar": "^2.1.7",
+    "chokidar": "^5.0.0",
     "dayjs": "^1.11.19",
     "nestjs-pino": "^4.5.0",
     "passport": "^0.7.0",

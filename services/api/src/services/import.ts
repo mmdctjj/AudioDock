@@ -1,7 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaClient, TrackType } from '@soundx/db'; // Import PrismaClient
-import { LocalMusicScanner } from '@soundx/utils';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { FileStatus, PrismaClient, TrackType } from '@soundx/db';
+import { LocalMusicScanner, ScanResult } from '@soundx/utils';
+import * as chokidar from 'chokidar';
+import * as crypto from 'crypto';
 import { randomUUID } from 'crypto';
+import * as fs from 'fs';
 import * as path from 'path';
 import { LogMethod } from '../common/log-method.decorator';
 import { AlbumService } from './album';
@@ -26,10 +29,13 @@ export interface ImportTask {
 }
 
 @Injectable()
-export class ImportService {
+export class ImportService implements OnModuleInit {
   private readonly logger = new Logger(ImportService.name);
   private tasks: Map<string, ImportTask> = new Map();
   private prisma: PrismaClient;
+  private folderCache = new Map<string, number>();
+  private watcher: chokidar.FSWatcher | null = null;
+  private scanner: LocalMusicScanner | null = null;
 
   constructor(
     private readonly trackService: TrackService,
@@ -37,6 +43,57 @@ export class ImportService {
     private readonly artistService: ArtistService,
   ) {
     this.prisma = new PrismaClient();
+  }
+
+  async onModuleInit() {
+    // Run content hash generation in background
+    setTimeout(() => {
+        this.generateMissingHashes().catch(err => {
+            this.logger.error("Failed to generate missing hashes", err);
+        });
+    }, 5000); // Delay 5s to avoid startup contention
+  }
+
+  private async generateMissingHashes() {
+      const tracks = await this.prisma.track.findMany({
+          where: {
+              OR: [
+                  { fileHash: null },
+                  { fileHash: '' }
+              ],
+              status: FileStatus.ACTIVE
+          },
+          select: { id: true, path: true, name: true }
+      });
+
+      if (tracks.length === 0) return;
+
+      this.logger.log(`Found ${tracks.length} tracks without hash. Starting generation...`);
+
+      for (const track of tracks) {
+          try {
+              // Resolve absolute path using TrackService
+              // track.path is URL like /music/Artist/Album/Song.mp3
+              const absolutePath = this.trackService.getFilePath(track.path);
+              
+              if (absolutePath && fs.existsSync(absolutePath)) {
+                  const hash = await this.calculateFingerprint(absolutePath);
+                  if (hash) {
+                      await this.prisma.track.update({
+                          where: { id: track.id },
+                          data: { fileHash: hash }
+                      });
+                      // this.logger.verbose(`Generated hash for track ${track.id}: ${hash}`);
+                  }
+              } else {
+                  this.logger.warn(`File not found for track ${track.id} (${track.name}): ${absolutePath || track.path}`);
+              }
+          } catch (e) {
+              this.logger.error(`Error generating hash for track ${track.id}`, e);
+          }
+      }
+      
+      this.logger.log(`Finished generating missing hashes.`);
   }
 
   @LogMethod()
@@ -64,42 +121,256 @@ export class ImportService {
   }
 
   private convertToHttpUrl(localPath: string, type: 'cover' | 'audio' | 'music', basePath: string): string {
-    // Calculate relative path from base directory to preserve folder structure
     const relativePath = path.relative(basePath, localPath);
-
     if (type === 'cover') {
-      // For covers, just use filename (existing behavior)
       const filename = path.basename(localPath);
       return `/covers/${filename}`;
     } else {
-      // For audio, preserve the relative path structure
       return `/${type}/${relativePath}`;
     }
   }
 
   private async clearLibraryData() {
     this.logger.log('Starting full library cleanup...');
-
-    // 1. Clear User Relations (dependent on Tracks/Albums)
     await this.prisma.userTrackHistory.deleteMany();
     await this.prisma.userTrackLike.deleteMany();
     await this.prisma.userAudiobookHistory.deleteMany();
     await this.prisma.userAudiobookLike.deleteMany();
     await this.prisma.userAlbumHistory.deleteMany();
     await this.prisma.userAlbumLike.deleteMany();
-
-    // 2. Clear Playlists (dependent on Users and Tracks, but we delete only playlists for now)
-    // Note: Implicit m-n relation table `_PlaylistToTrack` is cleaned up automatically by Prisma cascades usually,
-    // but explicit `Playlist` records need deletion.
     await this.prisma.playlist.deleteMany();
-
-    // 3. Clear Core Data
     await this.prisma.track.deleteMany();
     await this.prisma.album.deleteMany();
     await this.prisma.artist.deleteMany();
     await this.prisma.folder.deleteMany();
-
     this.logger.log('Full library cleanup completed.');
+  }
+
+  async calculateFingerprint(filePath: string): Promise<string> {
+    try {
+      if (!fs.existsSync(filePath)) return '';
+      const stat = await fs.promises.stat(filePath);
+      const size = stat.size;
+      const fd = await fs.promises.open(filePath, 'r');
+      
+      const bufferSize = 16 * 1024;
+      const startBuffer = Buffer.alloc(Math.min(bufferSize, size));
+      await fd.read(startBuffer, 0, startBuffer.length, 0);
+      
+      const endBuffer = Buffer.alloc(Math.min(bufferSize, size));
+      if (size > bufferSize) {
+        await fd.read(endBuffer, 0, endBuffer.length, size - endBuffer.length);
+      }
+      await fd.close();
+      
+      const hash = crypto.createHash('md5');
+      hash.update(String(size));
+      hash.update(startBuffer);
+      if (size > bufferSize) {
+        hash.update(endBuffer);
+      }
+      return hash.digest('hex');
+    } catch (e) {
+      console.error(`Failed to calculate fingerprint for ${filePath}`, e);
+      return '';
+    }
+  }
+
+  private setupWatcher(musicPath: string, audiobookPath: string, cachePath: string) {
+    if (this.watcher) {
+      this.watcher.close();
+    }
+
+    const paths = [musicPath, audiobookPath].filter(p => fs.existsSync(p));
+    this.logger.log(`Starting file watcher on: ${paths.join(', ')}`);
+
+    this.watcher = chokidar.watch(paths, {
+      persistent: true,
+      usePolling: true,
+      ignoreInitial: true,
+      awaitWriteFinish: {
+        stabilityThreshold: 2000,
+        pollInterval: 100
+      }
+    });
+
+    const getBasePathAndType = (filePath: string): { basePath: string, type: TrackType } | null => {
+      if (filePath.startsWith(musicPath)) return { basePath: musicPath, type: TrackType.MUSIC };
+      if (filePath.startsWith(audiobookPath)) return { basePath: audiobookPath, type: TrackType.AUDIOBOOK };
+      return null;
+    };
+
+    this.watcher
+      .on('add', async (filePath) => {
+        const info = getBasePathAndType(filePath);
+        if (info && /\.(mp3|flac|ogg|wav|m4a)$/i.test(filePath)) {
+          this.logger.log(`[Watcher] File added: ${filePath}`);
+          await this.handleFileAdd(filePath, info.basePath, info.type, cachePath);
+        }
+      })
+      .on('change', async (filePath) => {
+        const info = getBasePathAndType(filePath);
+        if (info && /\.(mp3|flac|ogg|wav|m4a)$/i.test(filePath)) {
+            this.logger.log(`[Watcher] File changed: ${filePath}`);
+            await this.handleFileChange(filePath, info.basePath, info.type, cachePath);
+        }
+      })
+      .on('unlink', async (filePath) => {
+         this.logger.log(`[Watcher] File unlinked: ${filePath}`);
+         await this.handleFileUnlink(filePath, musicPath, audiobookPath);
+      });
+  }
+
+  private async handleFileAdd(filePath: string, basePath: string, type: TrackType, cachePath: string) {
+    const hash = await this.calculateFingerprint(filePath);
+    if (!hash) return;
+
+    const trashedTrack = await this.prisma.track.findFirst({
+        where: { fileHash: hash, status: FileStatus.TRASHED }
+    });
+
+    if (trashedTrack) {
+        this.logger.log(`[Watcher] Resurrecting moved track: ${trashedTrack.name} -> ${filePath}`);
+        const audioUrl = this.convertToHttpUrl(filePath, type === TrackType.AUDIOBOOK ? 'audio' : 'music', basePath);
+        const folderId = await this.getFolderId(filePath, basePath, type);
+        
+        await this.prisma.track.update({
+             where: { id: trashedTrack.id },
+             data: { 
+                 path: audioUrl, 
+                 folderId: folderId,
+                 status: FileStatus.ACTIVE,
+                 trashedAt: null,
+                 fileModifiedAt: new Date()
+             }
+        });
+        
+        if (trashedTrack.albumId) {
+            await this.updateParentStatus(trashedTrack.albumId, 'album');
+        }
+    } else {
+        if (!this.scanner) this.scanner = new LocalMusicScanner(cachePath);
+        const metadata = await this.scanner.parseFile(filePath);
+        if (metadata) {
+             const audioUrl = this.convertToHttpUrl(filePath, type === TrackType.AUDIOBOOK ? 'audio' : 'music', basePath);
+             const folderId = await this.getFolderId(filePath, basePath, type);
+             await this.processTrackData(metadata, type, basePath, cachePath, audioUrl, folderId, hash);
+        }
+    }
+  }
+
+  private async handleFileChange(filePath: string, basePath: string, type: TrackType, cachePath: string) {
+     if (!this.scanner) this.scanner = new LocalMusicScanner(cachePath);
+     const metadata = await this.scanner.parseFile(filePath);
+     if (metadata) {
+         const audioUrl = this.convertToHttpUrl(filePath, type === TrackType.AUDIOBOOK ? 'audio' : 'music', basePath);
+         const track = await this.trackService.findByPath(audioUrl);
+         
+         const hash = await this.calculateFingerprint(filePath);
+
+         if (track) {
+            await this.prisma.track.update({
+                where: { id: track.id },
+                data: {
+                    name: metadata.title || path.basename(filePath),
+                    duration: Math.round(metadata.duration || 0),
+                    fileHash: hash,
+                    fileModifiedAt: new Date(),
+                }
+            });
+         }
+     }
+  }
+
+  private async handleFileUnlink(filePath: string, musicPath: string, audiobookPath: string) {
+     let url = '';
+     if (filePath.startsWith(musicPath)) {
+         url = this.convertToHttpUrl(filePath, 'music', musicPath);
+     } else if (filePath.startsWith(audiobookPath)) {
+         url = this.convertToHttpUrl(filePath, 'audio', audiobookPath);
+     }
+
+     if (!url) return;
+
+     const track = await this.prisma.track.findFirst({
+         where: { 
+             path: url,
+             status: FileStatus.ACTIVE 
+         }
+     });
+     
+     if (track) {
+         this.logger.log(`[Watcher] Soft deleting track ${track.id} (${track.name})`);
+         await this.prisma.track.update({
+             where: { id: track.id },
+             data: {
+                 status: FileStatus.TRASHED,
+                 trashedAt: new Date()
+             }
+         });
+
+         if (track.albumId) {
+             await this.updateParentStatus(track.albumId, 'album');
+         }
+     }
+  }
+
+  private async updateParentStatus(id: number, type: 'album' | 'artist') {
+      if (type === 'album') {
+          const album = await this.prisma.album.findUnique({
+              where: { id },
+              include: { _count: { select: { tracks: { where: { status: FileStatus.ACTIVE } } } } }
+          });
+
+          if (!album) return;
+
+          // @ts-ignore
+          const activeTracksCount = album._count.tracks;
+
+          if (activeTracksCount === 0 && album.status === FileStatus.ACTIVE) {
+              await this.prisma.album.update({
+                  where: { id },
+                  data: { status: FileStatus.TRASHED, trashedAt: new Date() }
+              });
+              const albumWithArtist = await this.prisma.album.findUnique({ where: { id }, select: { artist: true, type: true } });
+              if (albumWithArtist) {
+                  const artist = await this.prisma.artist.findFirst({ where: { name: albumWithArtist.artist, type: albumWithArtist.type } });
+                  if (artist) await this.updateParentStatus(artist.id, 'artist');
+              }
+          } else if (activeTracksCount > 0 && album.status === FileStatus.TRASHED) {
+              await this.prisma.album.update({
+                  where: { id },
+                  data: { status: FileStatus.ACTIVE, trashedAt: null }
+              });
+              const albumWithArtist = await this.prisma.album.findUnique({ where: { id }, select: { artist: true, type: true } });
+              if (albumWithArtist) {
+                  const artist = await this.prisma.artist.findFirst({ where: { name: albumWithArtist.artist, type: albumWithArtist.type } });
+                  if (artist) await this.updateParentStatus(artist.id, 'artist');
+              }
+          }
+      } else if (type === 'artist') {
+          const artist = await this.prisma.artist.findUnique({
+              where: { id }
+          });
+          
+          if (!artist) return;
+          
+          const activeAlbumsCount = await this.prisma.album.count({
+              where: { artist: artist.name, type: artist.type, status: FileStatus.ACTIVE }
+          });
+
+          if (activeAlbumsCount === 0 && artist.status === FileStatus.ACTIVE) {
+              await this.prisma.artist.update({
+                  where: { id },
+                  data: { status: FileStatus.TRASHED, trashedAt: new Date() }
+              });
+          } else if (activeAlbumsCount > 0 && artist.status === FileStatus.TRASHED) {
+              await this.prisma.artist.update({
+                  where: { id },
+                  data: { status: FileStatus.ACTIVE, trashedAt: null }
+              });
+          }
+      }
   }
 
   private async startImport(id: string, musicPath: string, audiobookPath: string, cachePath: string, mode: 'incremental' | 'full') {
@@ -107,81 +378,74 @@ export class ImportService {
     if (!task) return;
 
     try {
-      console.log("startImport", id, musicPath, audiobookPath, cachePath, mode);
-
       if (mode === 'full') {
         await this.clearLibraryData();
       }
 
-      const scanner = new LocalMusicScanner(cachePath);
-      // Quickly count total files for progress display
-      const musicCount = await scanner.countFiles(musicPath);
-      const audiobookCount = await scanner.countFiles(audiobookPath);
+      this.scanner = new LocalMusicScanner(cachePath);
+      const musicCount = await this.scanner.countFiles(musicPath);
+      const audiobookCount = await this.scanner.countFiles(audiobookPath);
       task.total = musicCount + audiobookCount;
       task.current = 0;
-
       task.status = TaskStatus.PARSING;
 
-      // Cache for folder IDs to reduce DB queries
-      const folderCache = new Map<string, number>();
+      const processItem = async (item: ScanResult, type: TrackType, audioBasePath: string) => {
+          const audioUrl = this.convertToHttpUrl(item.path, type === TrackType.AUDIOBOOK ? 'audio' : 'music', audioBasePath);
+          const folderId = await this.getFolderId(item.path, audioBasePath, type);
+          const hash = await this.calculateFingerprint(item.path);
 
-      const getFolderId = async (localPath: string, basePath: string, type: TrackType): Promise<number | null> => {
-        const dirPath = path.dirname(localPath);
-        const cacheKey = `${dirPath}`;
-        
-        if (folderCache.has(cacheKey)) {
-          return folderCache.get(cacheKey)!;
-        }
-
-        const folderId = await this.getOrCreateFolderHierarchically(dirPath, basePath, type);
-        if (folderId) {
-          folderCache.set(cacheKey, folderId);
-        }
-        return folderId;
+          await this.processTrackData(item, type, audioBasePath, cachePath, audioUrl, folderId, hash);
+          task.current = (task.current || 0) + 1;
       };
 
-      const processItem = async (item: any, type: TrackType, audioBasePath: string, index: number) => {
+      await this.scanner.scanMusic(musicPath, async (item) => {
+        task.currentFileName = item.title || path.basename(item.path);
+        await processItem(item, TrackType.MUSIC, musicPath);
+      });
+
+      await this.scanner.scanAudiobook(audiobookPath, async (item) => {
+        task.currentFileName = item.title || path.basename(item.path);
+        await processItem(item, TrackType.AUDIOBOOK, audiobookPath);
+      });
+
+      task.status = TaskStatus.SUCCESS;
+      this.setupWatcher(musicPath, audiobookPath, cachePath);
+
+    } catch (error) {
+      console.error('Import failed:', error);
+      task.status = TaskStatus.FAILED;
+      task.message = error instanceof Error ? error.message : String(error);
+    }
+  }
+  
+  private async processTrackData(item: ScanResult, type: TrackType, audioBasePath: string, cachePath: string, audioUrl: string, folderId: number | null, hash: string) {
         const artistName = item.artist || '未知';
         const albumName = item.album || '未知';
-
-        // Convert local cover path to HTTP URL
         const coverUrl = item.coverPath ? this.convertToHttpUrl(item.coverPath, 'cover', cachePath) : null;
 
-
-        // Convert local audio path to HTTP URL, preserving relative path from base directory
-        const audioUrl = this.convertToHttpUrl(item.path, type === TrackType.AUDIOBOOK ? 'audio' : 'music', audioBasePath);
-
-        // Track ID to collect for playlist
-        let trackId: number;
-
-         // Handle Folder (Compute this first as it's needed for both new and existing tracks)
-         const folderId = await getFolderId(item.path, audioBasePath, type);
-
-        // CHECK EXISTENCE (Incremental Mode Logic)
         const existingTrack = await this.trackService.findByPath(audioUrl);
+        
         if (existingTrack) {
-          // If track exists, stick with its ID
-          trackId = existingTrack.id;
-
-          // Check if folderId needs update
           if (existingTrack.folderId !== folderId && folderId) {
              await this.trackService.updateTrack(existingTrack.id, { folderId });
           }
-           
+          if (!existingTrack.fileHash && hash) {
+              await this.prisma.track.update({ where: { id: existingTrack.id }, data: { fileHash: hash } });
+          }
         } else {
-          // 1. Handle Artist
           let artist = await this.artistService.findByName(artistName, type);
           if (!artist) {
-            // Use album cover as fallback for artist avatar if not provided
-            // Since we don't have artist specific avatar in import, we use coverUrl (which is album cover)
             artist = await this.artistService.createArtist({
               name: artistName,
               avatar: coverUrl,
-              type: type
+              type: type,
+              status: FileStatus.ACTIVE,
+              trashedAt: null
             });
+          } else if (artist.status === FileStatus.TRASHED) {
+              await this.artistService.updateArtist(artist.id, { status: FileStatus.ACTIVE, trashedAt: null });
           }
 
-          // 2. Handle Album
           let album = await this.albumService.findByName(albumName, artistName, type);
           if (!album) {
             album = await this.albumService.createAlbum({
@@ -189,12 +453,15 @@ export class ImportService {
               artist: artistName,
               cover: coverUrl,
               year: item.year ? String(item.year) : null,
-              type: type
+              type: type,
+              status: FileStatus.ACTIVE,
+              trashedAt: null
             });
+          } else if (album.status === FileStatus.TRASHED) {
+              await this.albumService.updateAlbum(album.id, { status: FileStatus.ACTIVE, trashedAt: null });
           }
 
-          // 3. Create Track
-          const newTrack = await this.trackService.createTrack({
+          await this.trackService.createTrack({
             name: item.title || path.basename(item.path),
             artist: artistName,
             album: albumName,
@@ -202,7 +469,7 @@ export class ImportService {
             path: audioUrl,
             duration: Math.round(item.duration || 0),
             lyrics: item.lyrics || null,
-            index: index + 1 || 1, // Track number/index from metadata
+            index: item.track?.no || 0,
             type: type,
             createdAt: new Date(),
             fileModifiedAt: item?.mtime ? new Date(item.mtime) : null,
@@ -210,33 +477,26 @@ export class ImportService {
             artistId: artist.id,
             albumId: album.id,
             folderId: folderId,
-          });
-          trackId = newTrack.id;
+            fileHash: hash,
+            status: FileStatus.ACTIVE,
+            trashedAt: null
+          } as any);
         }
+  }
 
-
-        task.current = (task.current || 0) + 1;
-      };
-
-      // Scan & Save Music
-      await scanner.scanMusic(musicPath, async (item) => {
-        task.currentFileName = item.title || path.basename(item.path);
-        await processItem(item || {}, TrackType.MUSIC, musicPath, task.current || 0);
-      });
-
-      // Scan & Save Audiobooks
-      await scanner.scanAudiobook(audiobookPath, async (item) => {
-        task.currentFileName = item.title || path.basename(item.path);
-        await processItem(item || {}, TrackType.AUDIOBOOK, audiobookPath, task.current || 0);
-      });
-
-
-      task.status = TaskStatus.SUCCESS;
-    } catch (error) {
-      console.error('Import failed:', error);
-      task.status = TaskStatus.FAILED;
-      task.message = error instanceof Error ? error.message : String(error);
+  private async getFolderId(localPath: string, basePath: string, type: TrackType): Promise<number | null> {
+    const dirPath = path.dirname(localPath);
+    const cacheKey = `${dirPath}`;
+    
+    if (this.folderCache.has(cacheKey)) {
+      return this.folderCache.get(cacheKey)!;
     }
+
+    const folderId = await this.getOrCreateFolderHierarchically(dirPath, basePath, type);
+    if (folderId) {
+      this.folderCache.set(cacheKey, folderId);
+    }
+    return folderId;
   }
 
   private async getOrCreateFolderHierarchically(localPath: string, basePath: string, type: TrackType): Promise<number | null> {
@@ -266,9 +526,6 @@ export class ImportService {
   }
 }
 
-
-
-// 将中文数字转为阿拉伯数字
 function chineseToNumber(chinese: string): number {
   const map: Record<string, number> = {
     "零": 0, "〇": 0,
@@ -276,17 +533,13 @@ function chineseToNumber(chinese: string): number {
     "五": 5, "六": 6, "七": 7, "八": 8, "九": 9,
     "十": 10, "百": 100, "千": 1000, "万": 10000,
   };
-
   let num = 0;
   let unit = 1;
   let lastUnit = 1;
-
   for (let i = chinese.length - 1; i >= 0; i--) {
     const char = chinese[i];
     const value = map[char];
-
     if (value === undefined) continue;
-
     if (value >= 10) {
       if (value > lastUnit) {
         lastUnit = value;
@@ -302,17 +555,9 @@ function chineseToNumber(chinese: string): number {
 }
 
 export function extractEpisodeNumber(title: string): number {
-  // 1. 优先匹配阿拉伯数字（如：1集、第12章、13）
   let match = title.match(/(\d{1,4})\s*(集|章|节|话)?/);
-  if (match) {
-    return Number(match[1]);
-  }
-
-  // 2. 匹配中文数字（如：第一集、第二十章、第五十五话）
+  if (match) return Number(match[1]);
   match = title.match(/第?([零〇一二三四五六七八九十百千万两]{1,})[集章节话]?/);
-  if (match) {
-    return chineseToNumber(match[1]);
-  }
-
+  if (match) return chineseToNumber(match[1]);
   return 0;
 }

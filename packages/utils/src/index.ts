@@ -121,7 +121,7 @@ export class LocalMusicScanner {
     }
   }
 
-  private async parseFile(filePath: string): Promise<ScanResult | null> {
+  public async parseFile(filePath: string): Promise<ScanResult | null> {
     try {
       const metadata = await music.parseFile(filePath);
       const common = metadata.common;

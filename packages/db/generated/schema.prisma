@@ -17,6 +17,11 @@ enum TrackType {
   AUDIOBOOK
 }
 
+enum FileStatus {
+  ACTIVE
+  TRASHED
+}
+
 model Track {
   id             Int       @id @default(autoincrement())
   name           String
@@ -32,6 +37,11 @@ model Track {
   fileModifiedAt DateTime?
   episodeNumber  Int?      @default(0)
 
+  // Fingerprinting and Soft Delete
+  fileHash  String?
+  status    FileStatus @default(ACTIVE)
+  trashedAt DateTime?
+
   // Relations to entity tables (Optional for compatibility with existing string fields)
   artistId     Int?
   artistEntity Artist? @relation(fields: [artistId], references: [id])
@@ -46,6 +56,9 @@ model Track {
   playlists                  Playlist[]
   folderId                   Int?
   folder                     Folder?                @relation(fields: [folderId], references: [id])
+
+  @@index([fileHash])
+  @@index([status])
 }
 
 model Album {
@@ -56,11 +69,16 @@ model Album {
   year   String?
   type   TrackType @default(MUSIC)
 
+  status    FileStatus @default(ACTIVE)
+  trashedAt DateTime?
+
   tracks Track[]
 
   /// 🔁 反向关系
   likedByUsers    UserAlbumLike[]
   listenedByUsers UserAlbumHistory[]
+
+  @@index([status])
 }
 
 model Artist {
@@ -69,7 +87,12 @@ model Artist {
   avatar String?
   type   TrackType @default(MUSIC)
 
+  status    FileStatus @default(ACTIVE)
+  trashedAt DateTime?
+
   tracks Track[]
+
+  @@index([status])
 }
 
 model UserTrackLike {

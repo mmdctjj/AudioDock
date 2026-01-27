@@ -10,7 +10,7 @@ export class ArtistService {
   }
 
   async getArtistList(): Promise<Artist[]> {
-    return await this.prisma.artist.findMany();
+    return await this.prisma.artist.findMany({ where: { status: 'ACTIVE' } });
   }
 
   async findByName(name: string, type?: any): Promise<Artist | null> {
@@ -18,7 +18,7 @@ export class ArtistService {
     if (name === null || name === undefined) {
       return null;
     }
-    const where: any = { name };
+    const where: any = { name, status: 'ACTIVE' };
     if (type) {
       where.type = type;
     }
@@ -26,7 +26,7 @@ export class ArtistService {
   }
 
   async getArtistById(id: number): Promise<Artist | null> {
-    return await this.prisma.artist.findUnique({ where: { id } });
+    return await this.prisma.artist.findUnique({ where: { id, status: 'ACTIVE' } });
   }
 
   async getArtistTableList(
@@ -34,6 +34,7 @@ export class ArtistService {
     current: number,
   ): Promise<Artist[]> {
     return await this.prisma.artist.findMany({
+      where: { status: 'ACTIVE' },
       skip: (current - 1) * pageSize, // 计算要跳过多少条
       take: pageSize,
     });
@@ -44,7 +45,7 @@ export class ArtistService {
     loadCount: number,
     type?: any,
   ): Promise<Artist[]> {
-    const where: any = {};
+    const where: any = { status: 'ACTIVE' };
     if (type) {
       where.type = type;
     }
@@ -56,7 +57,7 @@ export class ArtistService {
   }
 
   async artistCount(type?: TrackType): Promise<number> {
-    const where: any = {};
+    const where: any = { status: 'ACTIVE' };
     if (type) {
       where.type = type;
     }
@@ -112,6 +113,7 @@ export class ArtistService {
       where: {
         AND: [
           type ? { type } : {},
+          { status: 'ACTIVE' },
           {
             OR: [
               { name: { contains: keyword } },
@@ -150,6 +152,7 @@ export class ArtistService {
       take: limit,
       where: {
         type,
+        status: 'ACTIVE',
       },
       orderBy: { id: 'desc' }, // Assuming higher ID means newer, or use createdAt if available
     });
@@ -158,11 +161,11 @@ export class ArtistService {
   // 获取随机艺术家
   async getRandomArtists(limit: number = 8, type: TrackType): Promise<Artist[]> {
     const count = await this.prisma.artist.count({
-      where: { type },
+      where: { type, status: 'ACTIVE' },
     });
     const skip = Math.max(0, Math.floor(Math.random() * (count - limit)));
     const artists = await this.prisma.artist.findMany({
-      where: { type },
+      where: { type, status: 'ACTIVE' },
       skip,
       take: limit,
     });

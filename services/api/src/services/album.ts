@@ -10,7 +10,7 @@ export class AlbumService {
   }
 
   async getAlbumList(): Promise<Album[]> {
-    return await this.prisma.album.findMany();
+    return await this.prisma.album.findMany({ where: { status: 'ACTIVE' } });
   }
 
   async findByName(name: string, artist?: string, type?: any): Promise<Album | null> {
@@ -26,12 +26,13 @@ export class AlbumService {
     if (type !== null && type !== undefined) {
       where.type = type;
     }
+    where.status = 'ACTIVE';
 
     return await this.prisma.album.findFirst({ where });
   }
 
   async getAlbumsByArtist(artist: string, userId?: number): Promise<Album[]> {
-    const list = await this.prisma.album.findMany({ where: { artist } });
+    const list = await this.prisma.album.findMany({ where: { artist, status: 'ACTIVE' } });
     if (userId) {
       const audiobookAlbums = list.filter(a => a.type === 'AUDIOBOOK');
       const musicAlbums = list.filter(a => a.type !== 'AUDIOBOOK');
@@ -51,6 +52,7 @@ export class AlbumService {
           contains: artistName,
           not: artistName,
         },
+        status: 'ACTIVE',
       },
       orderBy: { id: 'desc' },
     });
@@ -76,7 +78,10 @@ export class AlbumService {
   }
 
   async getAlbumById(id: number, userId?: number): Promise<Album | null> {
-    const album = await this.prisma.album.findUnique({ where: { id }, include: { likedByUsers: true, listenedByUsers: true } });
+    const album = await this.prisma.album.findUnique({ 
+      where: { id, status: 'ACTIVE' }, 
+      include: { likedByUsers: true, listenedByUsers: true } 
+    });
     if (!album) return null;
 
     if (album.type === 'AUDIOBOOK' && userId) {
@@ -88,6 +93,7 @@ export class AlbumService {
 
   async getAlbumTableList(pageSize: number, current: number): Promise<Album[]> {
     return await this.prisma.album.findMany({
+      where: { status: 'ACTIVE' },
       skip: (current - 1) * pageSize,
       take: pageSize,
     });
@@ -97,7 +103,7 @@ export class AlbumService {
     const result = await this.prisma.album.findMany({
       skip: loadCount * pageSize,
       take: pageSize,
-      where: { type },
+      where: { type, status: 'ACTIVE' },
     });
 
     if (type === 'AUDIOBOOK') {
@@ -108,7 +114,9 @@ export class AlbumService {
   }
 
   async albumCount(type?: TrackType): Promise<number> {
-    return await this.prisma.album.count({ where: { type } });
+    const where: any = { status: 'ACTIVE' };
+    if (type) where.type = type;
+    return await this.prisma.album.count({ where });
   }
 
   async createAlbum(album: Omit<Album, 'id'>): Promise<Album> {
@@ -153,7 +161,7 @@ export class AlbumService {
   // 新增：最近专辑（按 id 倒序）
   async getLatestAlbums(limit = 8, type: TrackType, userId: number): Promise<Album[]> {
     const result = await this.prisma.album.findMany({
-      where: type ? { type } : undefined,
+      where: type ? { type, status: 'ACTIVE' } : { status: 'ACTIVE' },
       orderBy: { id: 'desc' },
       take: limit,
     });
@@ -168,11 +176,11 @@ export class AlbumService {
   // 新增：获取随机专辑
   async getRandomAlbums(limit = 8, type: TrackType, userId: number): Promise<Album[]> {
     const count = await this.prisma.album.count({
-      where: type ? { type } : undefined,
+      where: type ? { type, status: 'ACTIVE' } : { status: 'ACTIVE' },
     });
     const skip = Math.max(0, Math.floor(Math.random() * (count - limit)));
     const result = await this.prisma.album.findMany({
-      where: type ? { type } : undefined,
+      where: type ? { type, status: 'ACTIVE' } : { status: 'ACTIVE' },
       skip,
       take: limit,
     });
@@ -195,7 +203,7 @@ export class AlbumService {
     });
     const listenedIds = listened.map((r) => r.albumId);
 
-    const whereClause: any = listenedIds.length ? { id: { notIn: listenedIds } } : {};
+    const whereClause: any = listenedIds.length ? { id: { notIn: listenedIds }, status: 'ACTIVE' } : { status: 'ACTIVE' };
     if (type) {
       whereClause.type = type;
     }
@@ -228,6 +236,7 @@ export class AlbumService {
     if (type) {
       where.type = type;
     }
+    where.status = 'ACTIVE';
 
     const candidates = await this.prisma.album.findMany({
       where,
@@ -281,6 +290,7 @@ export class AlbumService {
         album: { in: albumNames },
         artist: { in: artists },
         type: 'AUDIOBOOK',
+        status: 'ACTIVE',
       },
       select: {
         id: true,
