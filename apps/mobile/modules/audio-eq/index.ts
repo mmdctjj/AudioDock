@@ -10,6 +10,11 @@ export function initEqualizer(sessionId: number = 0) {
   return AudioEq.initEqualizer(sessionId);
 }
 
+// 自动发现并初始化
+export function discoverAndInit() {
+  return AudioEq.discoverAndInit();
+}
+
 // 2. 设置增益
 // bandIndex: 0 - 4 (分别代表低音到高音)
 // gainValue: -12 到 12 (dB)
@@ -30,4 +35,11 @@ export function getBandFreqs() {
     return AudioEq.getBandFreqs();
   }
   return [60, 230, 910, 3600, 14000]; // 默认值
+}
+
+// 5. 释放资源
+export function release() {
+  if (AudioEq.release) {
+    AudioEq.release();
+  }
 }

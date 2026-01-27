@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as AudioEq from "../../modules/audio-eq";
 import { useSettings } from "../context/SettingsContext";
-import { getAudioSessionId } from "../utils/TrackPlayerExtension";
 
 const BANDS = [
   { index: 0, label: "60Hz", name: "超低音" },
@@ -49,22 +48,19 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({
 
   useEffect(() => {
     if (visible) {
-      getAudioSessionId().then((sessionId) => {
-        if (sessionId > 0) {
-          // 挂载 EQ 到这个真实的 SessionId
-          const success = AudioEq.initEqualizer(sessionId);
-          if (success) {
-            console.log("EQ 挂载成功！同步现有增益...");
-            // 初始化成功后，立即同步当前的增益值
-            const currentGains = eqGains || gains;
-            currentGains.forEach((gain, index) => {
-              AudioEq.setGain(index, gain);
-            });
-          }
-        }
-      });
+      const success = AudioEq.discoverAndInit();
+      if (success) {
+        applyCurrentGains();
+      }
     }
   }, [visible]);
+
+  const applyCurrentGains = () => {
+    const currentGains = eqGains || gains;
+    currentGains.forEach((gain, index) => {
+      AudioEq.setGain(index, gain);
+    });
+  };
 
   const handleGainChange = (bandIndex: number, value: number) => {
     const newGains = [...gains];
@@ -78,9 +74,17 @@ export const EqualizerModal: React.FC<EqualizerModalProps> = ({
     const defaultGains = [0, 0, 0, 0, 0];
     setGains(defaultGains);
     updateSetting("eqGains", defaultGains);
+    
+    // 恢复默认音效
     defaultGains.forEach((gain, index) => {
       AudioEq.setGain(index, gain);
     });
+
+    // 彻底释放原生 EQ 实例，这通常能恢复受影响的系统声音
+    if (AudioEq.release) {
+        console.log("正在释放 EQ 实例以恢复系统声音...");
+        AudioEq.release();
+    }
   };
 
   return (
