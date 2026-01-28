@@ -93,6 +93,9 @@ const Player: React.FC = () => {
     syncActiveMode,
     removeTrack,
     isRadioMode,
+    playlistSource,
+    isLoadingMore,
+    loadMoreSourceTracks,
   } = usePlayerStore();
   const { mode: appMode } = usePlayMode();
   const { user } = useAuthStore();
@@ -1825,6 +1828,9 @@ const Player: React.FC = () => {
                   tracks={playlist}
                   currentTrack={currentTrack}
                   isPlaying={isPlaying}
+                  hasMore={playlistSource?.hasMore}
+                  isLoadingMore={isLoadingMore}
+                  onLoadMore={loadMoreSourceTracks}
                   onPuse={pause}
                   onPlay={handlePlay}
                   onAddToPlaylist={openAddToPlaylistModal}
@@ -1865,6 +1871,9 @@ const Player: React.FC = () => {
           tracks={playlist}
           currentTrack={currentTrack}
           isPlaying={isPlaying}
+          hasMore={playlistSource?.hasMore}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={loadMoreSourceTracks}
           onPuse={pause}
           onPlay={handlePlay}
           onAddToPlaylist={openAddToPlaylistModal}

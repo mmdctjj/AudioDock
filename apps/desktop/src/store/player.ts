@@ -1,8 +1,29 @@
-import { addAlbumToHistory, addToHistory, getLatestTracks, reportAudiobookProgress, toggleTrackLike, toggleTrackUnLike } from "@soundx/services";
+import {
+  addAlbumToHistory,
+  addToHistory,
+  getAlbumTracks,
+  getLatestTracks,
+  loadMoreTrack,
+  reportAudiobookProgress,
+  toggleTrackLike,
+  toggleTrackUnLike
+} from "@soundx/services";
 import { create } from "zustand";
 import { TrackType, type Track } from "../models";
 import { getPlayMode } from "../utils/playMode";
 import { useAuthStore } from "./auth";
+
+export interface PlaylistSource {
+  type: "album" | "tracks" | "other";
+  id?: number | string;
+  pageSize: number;
+  currentPage: number;
+  hasMore: boolean;
+  params?: {
+    sort?: "asc" | "desc";
+    keyword?: string;
+  };
+}
 
 interface PlayerModeState {
   currentTrack: Track | null;
@@ -10,18 +31,21 @@ interface PlayerModeState {
   currentTime: number;
   duration: number;
   currentAlbumId: number | string | null;
+  playlistSource: PlaylistSource | null;
 }
 
 interface PlayerState {
-  // Active State (Proxy for UI)
+  // Mode-specific state (preserved per MUSIC/AUDIOBOOK)
   currentTrack: Track | null;
   playlist: Track[];
   currentTime: number;
   duration: number;
   currentAlbumId: number | string | null;
+  playlistSource: PlaylistSource | null;
 
   // Global State
   isPlaying: boolean;
+  isLoadingMore: boolean;
   playMode: "sequence" | "loop" | "shuffle" | "single";
   volume: number;
   activeMode: TrackType;
@@ -31,18 +55,28 @@ interface PlayerState {
   modes: Record<TrackType, PlayerModeState>;
 
   // Actions
-  play: (track?: Track, albumId?: number | string, startTime?: number, fromRadio?: boolean) => void;
+  play: (
+    track?: Track,
+    albumId?: number | string,
+    startTime?: number,
+    fromRadio?: boolean
+  ) => void;
   pause: () => void;
-  setPlaylist: (tracks: Track[]) => void;
+  setPlaylist: (tracks: Track[], source?: PlaylistSource | null) => void;
+  appendTracks: (tracks: Track[], hasMore: boolean) => void;
   next: () => void;
   prev: () => void;
   setMode: (mode: "sequence" | "loop" | "shuffle" | "single") => void;
   setVolume: (volume: number) => void;
   setCurrentTime: (time: number) => void;
   setDuration: (duration: number) => void;
-  toggleLike: (trackId: number | string, type: "like" | "unlike") => Promise<void>;
+  toggleLike: (
+    trackId: number | string,
+    type: "like" | "unlike"
+  ) => Promise<void>;
   removeTrack: (trackId: number | string) => void;
   startRadioMode: () => Promise<void>;
+  loadMoreSourceTracks: () => Promise<void>;
 
   // Internal/System Actions
   syncActiveMode: (mode: TrackType) => void;
@@ -55,6 +89,7 @@ const DEFAULT_MODE_STATE: PlayerModeState = {
   currentTime: 0,
   duration: 0,
   currentAlbumId: null,
+  playlistSource: null
 };
 
 // Helper to load state from localStorage with safe defaults
@@ -127,37 +162,39 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     }
   };
 
+  const modes: Record<TrackType, PlayerModeState> = {
+    [TrackType.MUSIC]: initialMusicState,
+    [TrackType.AUDIOBOOK]: initialAudiobookState,
+  };
+
   return {
-    // Spread active state properties to top level
     ...activeState,
+    modes,
 
     isPlaying: false,
+    isLoadingMore: false,
     playMode: storedPlayMode,
     volume: storedVolume,
     activeMode: initialMode,
     isRadioMode: false,
 
-    modes: {
-      [TrackType.MUSIC]: initialMusicState,
-      [TrackType.AUDIOBOOK]: initialAudiobookState,
-    },
-
     _saveCurrentStateToMode: () => {
       const state = get();
+      const newModes = { ...state.modes };
+
       const modeState: PlayerModeState = {
         currentTrack: state.currentTrack,
         playlist: state.playlist,
         currentTime: state.currentTime,
         duration: state.duration,
         currentAlbumId: state.currentAlbumId,
+        playlistSource: state.playlistSource,
       };
 
-      // Update the stored mode state in memory
-      const newModes = { ...state.modes, [state.activeMode]: modeState };
-
-      // Persist to localStorage
+      newModes[state.activeMode] = modeState;
       persistModeState(state.activeMode, modeState);
 
+      set({ modes: newModes });
       return newModes;
     },
 
@@ -165,42 +202,23 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const state = get();
       if (state.activeMode === newMode) return;
 
-      // 1. Save current active state to the old mode
-      state._saveCurrentStateToMode(); // Valid because we called it, but we need to update state
+      state._saveCurrentStateToMode();
 
-      // Re-get updated modes (though _save returned them, simpler to just access properly if we were updating, but here we manually do it)
-      const currentModeStateProxy: PlayerModeState = {
-        currentTrack: state.currentTrack,
-        playlist: state.playlist,
-        currentTime: state.currentTime,
-        duration: state.duration,
-        currentAlbumId: state.currentAlbumId,
-      };
-      persistModeState(state.activeMode, currentModeStateProxy);
-
-      const newModes = {
-        ...state.modes,
-        [state.activeMode]: currentModeStateProxy
-      };
-
-      // 2. Load state for new mode
-      const nextModeState = newModes[newMode] || DEFAULT_MODE_STATE;
-
+      const nextModeState = state.modes[newMode];
       set({
         activeMode: newMode,
-        modes: newModes,
-        // Apply next state
         currentTrack: nextModeState.currentTrack,
         playlist: nextModeState.playlist,
         currentTime: nextModeState.currentTime,
         duration: nextModeState.duration,
         currentAlbumId: nextModeState.currentAlbumId,
+        playlistSource: nextModeState.playlistSource,
         isPlaying: false, // Pause on switch
       });
     },
 
     play: async (track, albumId, startTime, fromRadio = false) => {
-      const { currentTrack: current, currentAlbumId, activeMode } = get();
+      const { currentTrack: current, activeMode } = get();
 
       if (track) {
         if (!fromRadio) {
@@ -211,14 +229,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           reportProgress(get(), true);
           lastReportTime = 0; // Reset for new track
           set({ currentTrack: track, isPlaying: true, currentTime: startTime || 0 });
-          // Persist currentTrack change immediately.
+          
           const state = get();
           persistModeState(activeMode, {
             currentTrack: track,
             playlist: state.playlist,
             currentTime: startTime || 0,
             duration: track.duration || 0,
-            currentAlbumId: albumId || state.currentAlbumId
+            currentAlbumId: albumId || state.currentAlbumId,
+            playlistSource: state.playlistSource,
           });
 
           const deviceName =
@@ -229,13 +248,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           try {
             const userId = useAuthStore.getState().user?.id;
             if (userId) {
-              await addToHistory(track.id, userId, startTime, deviceName, device.id, false);
+              await addToHistory(track.id, userId, 0, deviceName, device.id);
             }
           } catch (e) {
             console.error("Failed to add track to history", e);
           }
 
-          if (albumId && albumId !== currentAlbumId) {
+          if (albumId && albumId !== get().currentAlbumId) {
             set({ currentAlbumId: albumId });
             try {
               const userId = useAuthStore.getState().user?.id;
@@ -257,137 +276,163 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           set({ isPlaying: true });
         }
       }
+      get()._saveCurrentStateToMode();
     },
 
     pause: () => {
+      const { isPlaying } = get();
+      if (!isPlaying) return;
       reportProgress(get(), true); // Report immediately on pause
       set({ isPlaying: false });
-      // Good time to save progress
-      const s = get();
-      persistModeState(s.activeMode, {
-        currentTrack: s.currentTrack,
-        playlist: s.playlist,
-        currentTime: s.currentTime,
-        duration: s.duration,
-        currentAlbumId: s.currentAlbumId
-      });
+      get()._saveCurrentStateToMode();
     },
 
-    setPlaylist: (tracks: Track[]) => {
-      set({ playlist: tracks, isRadioMode: false });
-      const s = get();
-      persistModeState(s.activeMode, {
-        ...s, // this spreads too much, but essentially we want current state properties
-        currentTrack: s.currentTrack,
-        playlist: tracks,
-        currentTime: s.currentTime,
-        duration: s.duration,
-        currentAlbumId: s.currentAlbumId
-      } as PlayerModeState);
+    setPlaylist: (tracks, source = null) => {
+      set({ playlist: tracks, playlistSource: source, isRadioMode: false });
+      get()._saveCurrentStateToMode();
+    },
+
+    appendTracks: (tracks, hasMore) => {
+      const { playlist, playlistSource } = get();
+      // Only append if it's already a source-linked playlist
+      if (!playlistSource) return;
+
+      // Deduplicate
+      const existingIds = new Set(playlist.map((t) => t.id));
+      const newTracks = tracks.filter((t) => !existingIds.has(t.id));
+
+      if (newTracks.length > 0) {
+        const updatedPlaylist = [...playlist, ...newTracks];
+        set({
+          playlist: updatedPlaylist,
+          playlistSource: {
+            ...playlistSource,
+            hasMore,
+            currentPage: Math.max(
+              playlistSource.currentPage,
+              Math.floor(updatedPlaylist.length / playlistSource.pageSize) - 1
+            ),
+          },
+        });
+        get()._saveCurrentStateToMode();
+      }
     },
 
     next: async () => {
-      const { playlist, currentTrack, playMode, activeMode, isRadioMode } = get();
+      const {
+        playlist,
+        currentTrack,
+        playMode,
+        isRadioMode,
+        playlistSource,
+        isLoadingMore,
+      } = get();
 
       if (isRadioMode) {
         try {
-          let res = await getLatestTracks(activeMode, true, 1);
-          if (res.code === 200 && res.data && res.data[0]?.id === currentTrack?.id) {
-            res = await getLatestTracks(activeMode, true, 1);
-          }
-          if (res.code === 200 && res.data && res.data.length > 0) {
-            get().play(res.data[0], undefined, undefined, true);
+          const res = await getLatestTracks();
+          if (res.code === 200 && res.data.length > 0) {
+            const nextTrack = res.data[0];
+            set({ currentTrack: nextTrack, currentTime: 0, isPlaying: true });
           }
         } catch (e) {
-          console.error("Radio next failed", e);
+          console.error("Radio next error", e);
         }
         return;
       }
 
-      if (!currentTrack || playlist.length === 0) return;
+      if (playlist.length === 0 || !currentTrack) return;
 
-      const currentIndex = playlist.findIndex((t: Track) => t.id === currentTrack.id);
+      const currentIndex = playlist.findIndex((t) => t.id === currentTrack.id);
       let nextIndex = currentIndex + 1;
+
+      // Lazy Loading Trigger: if we are at the end, attempt to load more
+      if (
+        nextIndex >= playlist.length - 2 &&
+        playlistSource?.hasMore &&
+        !isLoadingMore
+      ) {
+        await get().loadMoreSourceTracks();
+      }
 
       if (playMode === "shuffle") {
         nextIndex = Math.floor(Math.random() * playlist.length);
       } else if (playMode === "loop") {
-        if (nextIndex >= playlist.length) {
-          nextIndex = 0;
+        nextIndex = nextIndex % playlist.length;
+      } else if (playMode === "single") {
+        nextIndex = currentIndex;
+      }
+
+      if (nextIndex < playlist.length) {
+        const nextTrack = playlist[nextIndex];
+        set({ currentTrack: nextTrack, currentTime: 0, isPlaying: true });
+        reportProgress(get(), true);
+
+        const userId = useAuthStore.getState().user?.id;
+        if (userId) {
+          addToHistory(Number(nextTrack.id), userId).catch(console.error);
         }
-      } else {
-        if (nextIndex >= playlist.length) return;
       }
-
-      // Report previous track
-      reportProgress(get(), true);
-      lastReportTime = 0;
-
-      const nextTrack = playlist[nextIndex];
-      set({ currentTrack: nextTrack, isPlaying: true, currentTime: 0 });
-
-      const userId = useAuthStore.getState().user?.id;
-      if (userId) {
-        addToHistory(nextTrack.id, userId).catch(console.error);
-      }
-
-      // Persist
-      const s = get();
-      persistModeState(activeMode, {
-        currentTrack: nextTrack,
-        playlist: s.playlist,
-        currentTime: 0, // Reset time on new track
-        duration: 0,
-        currentAlbumId: s.currentAlbumId
-      } as PlayerModeState);
+      get()._saveCurrentStateToMode();
     },
 
     prev: async () => {
-      const { playlist, currentTrack, activeMode, isRadioMode } = get();
+      const { playlist, currentTrack, isRadioMode } = get();
 
       if (isRadioMode) {
         get().next();
         return;
       }
 
-      if (!currentTrack || playlist.length === 0) return;
+      if (playlist.length === 0 || !currentTrack) return;
 
-      const currentIndex = playlist.findIndex((t: Track) => t.id === currentTrack.id);
-      const prevIndex = currentIndex - 1;
+      const currentIndex = playlist.findIndex((t) => t.id === currentTrack.id);
+      let prevIndex = currentIndex - 1;
 
-      if (prevIndex < 0) return;
-
-      // Report previous track
-      reportProgress(get(), true);
-      lastReportTime = 0;
-
-      const prevTrack = playlist[prevIndex];
-      set({ currentTrack: prevTrack, isPlaying: true, currentTime: 0 });
-
-      const userId = useAuthStore.getState().user?.id;
-      if (userId) {
-        addToHistory(prevTrack.id, userId).catch(console.error);
+      if (prevIndex < 0) {
+        prevIndex = playlist.length - 1;
       }
 
-      // Persist
-      const s = get();
-      persistModeState(activeMode, {
-        currentTrack: prevTrack,
-        playlist: s.playlist,
-        currentTime: 0,
-        duration: 0,
-        currentAlbumId: s.currentAlbumId
-      } as PlayerModeState);
+      const prevTrack = playlist[prevIndex];
+      set({ currentTrack: prevTrack, currentTime: 0, isPlaying: true });
+      reportProgress(get(), true);
+
+      const userId = useAuthStore.getState().user?.id;
+        if (userId) {
+          addToHistory(Number(prevTrack.id), userId).catch(console.error);
+        }
+
+      get()._saveCurrentStateToMode();
     },
 
-    setMode: (mode) => set({ playMode: mode }),
-    setVolume: (volume) => set({ volume }),
+    setMode: (mode) => {
+      set({ playMode: mode });
+      localStorage.setItem("playOrder", mode);
+    },
+    setVolume: (volume) => {
+      set({ volume });
+      localStorage.setItem("playerVolume", String(volume));
+    },
 
     setCurrentTime: (time) => {
       set({ currentTime: time });
       // Check for progress reporting (throttled by reportProgress logic)
       reportProgress(get());
-      // Don't persist on every second, pointless & heavy. Persist on pause/change/unload.
+
+      // Near-end check for lazy loading
+      const state = get();
+      if (
+        state.playlistSource?.hasMore &&
+        !state.isLoadingMore &&
+        state.currentTrack
+      ) {
+        const currentIndex = state.playlist.findIndex(
+          (t) => t.id === state.currentTrack?.id
+        );
+        if (currentIndex >= state.playlist.length - 5) {
+          state.loadMoreSourceTracks();
+        }
+      }
     },
 
     setDuration: (duration) => set({ duration }),
@@ -428,8 +473,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           playlist: newPlaylist
         });
 
-        // Save progress/state to localStorage
-        state._saveCurrentStateToMode();
+        get()._saveCurrentStateToMode();
         
       } catch (e) {
         console.error("Failed to toggle like", e);
@@ -437,7 +481,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     },
 
     removeTrack: (trackId) => {
-      const { currentTrack, playlist, pause, activeMode } = get();
+      const { currentTrack, playlist, pause } = get();
 
       // If current track is being deleted, pause first
       if (currentTrack?.id === trackId) {
@@ -448,15 +492,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const updatedPlaylist = playlist.filter(t => t.id !== trackId);
       set({ playlist: updatedPlaylist });
 
-      // Persist changes
-      const s = get();
-      persistModeState(activeMode, {
-        currentTrack: s.currentTrack,
-        playlist: updatedPlaylist,
-        currentTime: s.currentTime,
-        duration: s.duration,
-        currentAlbumId: s.currentAlbumId
-      });
+      get()._saveCurrentStateToMode();
     },
 
     startRadioMode: async () => {
@@ -466,11 +502,75 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       try {
         const res = await getLatestTracks(activeMode, true, 1);
         if (res.code === 200 && res.data && res.data.length > 0) {
-          get().play(res.data[0], undefined, undefined, true);
+          set({
+            playlist: res.data,
+            currentTrack: res.data[0],
+            isPlaying: true,
+            isRadioMode: true,
+            playlistSource: null,
+          });
+          get()._saveCurrentStateToMode();
         }
       } catch (e) {
         console.error("Failed to start radio mode", e);
       }
-    }
+    },
+
+    loadMoreSourceTracks: async () => {
+      const { playlistSource, playlist, activeMode, isLoadingMore } = get();
+      if (!playlistSource || !playlistSource.hasMore || isLoadingMore) return;
+
+      set({ isLoadingMore: true });
+      try {
+        let newTracks: Track[] = [];
+        const nextPage = (playlistSource.currentPage || 0) + 1;
+        const pageSize = playlistSource.pageSize || 50;
+        const skip = nextPage * pageSize;
+
+        if (playlistSource.type === "album" && playlistSource.id) {
+          const res = await getAlbumTracks(
+            playlistSource.id,
+            pageSize,
+            skip,
+            playlistSource.params?.sort || "asc",
+            playlistSource.params?.keyword,
+            useAuthStore.getState().user?.id
+          );
+          if (res.code === 200) {
+            newTracks = res.data.list;
+          }
+        } else if (playlistSource.type === "tracks") {
+          const res = await loadMoreTrack({
+            pageSize,
+            loadCount: nextPage,
+            type: activeMode,
+          });
+          if (res.code === 200 && res.data) {
+            newTracks = res.data.list;
+          }
+        }
+
+        if (newTracks.length > 0) {
+          const updatedPlaylist = [...playlist, ...newTracks];
+          const updatedSource = {
+            ...playlistSource,
+            currentPage: nextPage,
+            hasMore: newTracks.length === pageSize,
+          };
+          set({
+            playlist: updatedPlaylist,
+            playlistSource: updatedSource,
+          });
+          get()._saveCurrentStateToMode();
+        } else {
+          set({ playlistSource: { ...playlistSource, hasMore: false } });
+          get()._saveCurrentStateToMode();
+        }
+      } catch (e) {
+        console.error("Failed to load more tracks for playlist", e);
+      } finally {
+        set({ isLoadingMore: false });
+      }
+    },
   };
 });

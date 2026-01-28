@@ -48,10 +48,11 @@ const Detail: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const { token } = theme.useToken();
-  const { play, setPlaylist } = usePlayerStore();
+  const { play, setPlaylist, currentAlbumId, playlist, appendTracks } = usePlayerStore();
 
   const pageSize = 50;
 
+  // ... (like logic remains same)
   const { run: likeAlbum } = useRequest(toggleAlbumLike, {
     manual: true,
     onSuccess: (res) => {
@@ -75,20 +76,35 @@ const Detail: React.FC = () => {
   useEffect(() => {
     if (id) {
       fetchAlbumDetails(id);
-      // Reset list when id changes
-      setTracks([]);
-      setPage(0);
-      setHasMore(true);
-      fetchTracks(id, 0, sort, keyword);
+      
+      // If this is the current playing album, initialize from player store
+      if (String(currentAlbumId) === String(id) && playlist.length > 0) {
+        setTracks(playlist);
+        setPage(Math.ceil(playlist.length / pageSize));
+        setHasMore(usePlayerStore.getState().playlistSource?.hasMore ?? true);
+      } else {
+        // Reset list and fetch fresh
+        setTracks([]);
+        setPage(0);
+        setHasMore(true);
+        fetchTracks(id, 0, sort, keyword);
+      }
     }
   }, [id, sort, keyword]);
+
+  // Two-way Sync: Keep detail tracks in sync with player playlist if it's the same album
+  useEffect(() => {
+    if (String(currentAlbumId) === String(id) && playlist.length > 0) {
+      setTracks(playlist);
+      setHasMore(usePlayerStore.getState().playlistSource?.hasMore ?? true);
+    }
+  }, [playlist, currentAlbumId, id]);
 
   const fetchAlbumDetails = async (albumId: number | string) => {
     try {
       const res = await getAlbumById(albumId);
       if (res.code === 200) {
         setAlbum(res.data);
-        // Check if liked by current user
         // @ts-ignore
         const likedByUsers = res.data.likedByUsers || [];
         const isLikedByCurrentUser = likedByUsers.some(
@@ -120,14 +136,20 @@ const Detail: React.FC = () => {
       );
       if (res.code === 200) {
         const newTracks = res.data.list;
-        // Ensure albumName is populated if needed by TrackList (though we pass explicit album name usually? TrackList uses track.album)
-        // Tracks from getAlbumTracks probably have album data or not?
+        const totalHasMore = newTracks.length === pageSize;
+        
         if (currentPage === 0) {
           setTracks(newTracks);
         } else {
           setTracks((prev) => [...prev, ...newTracks]);
         }
-        setHasMore(newTracks.length === pageSize);
+
+        // SYNC: If this is currently playing, append to player playlist
+        if (String(currentAlbumId) === String(albumId)) {
+          appendTracks(newTracks, totalHasMore);
+        }
+
+        setHasMore(totalHasMore);
         setPage(currentPage + 1);
       }
     } catch (error) {
@@ -140,7 +162,7 @@ const Detail: React.FC = () => {
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
     if (
-      scrollHeight - scrollTop === clientHeight &&
+      scrollHeight - scrollTop < clientHeight + 100 &&
       hasMore &&
       !loading &&
       id
@@ -151,7 +173,14 @@ const Detail: React.FC = () => {
 
   const handlePlayAll = () => {
     if (tracks.length > 0 && album) {
-      setPlaylist(tracks);
+      setPlaylist(tracks, {
+        type: 'album',
+        id: album.id,
+        pageSize: pageSize,
+        currentPage: page - 1,
+        hasMore: hasMore,
+        params: { sort, keyword }
+      });
       play(tracks[0], album.id);
     }
   };
@@ -326,6 +355,14 @@ const Detail: React.FC = () => {
                   : undefined
               }
               albumId={album?.id}
+              playlistSource={album ? {
+                  type: 'album' as const,
+                  id: album.id,
+                  pageSize: pageSize,
+                  currentPage: page - 1,
+                  hasMore: hasMore,
+                  params: { sort, keyword }
+              } : undefined}
             />
             {/* Load More / Footer */}
             <div

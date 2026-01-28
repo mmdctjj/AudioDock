@@ -22,8 +22,11 @@ interface QueueListProps {
   tracks: Track[];
   currentTrack: Track | null;
   isPlaying: boolean;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
   onPlay: (track: Track) => void;
   onPuse: (track: Track) => void;
+  onLoadMore?: () => void;
   onToggleLike: (
     e: React.MouseEvent,
     track: Track,
@@ -48,8 +51,11 @@ export const QueueList = forwardRef<QueueListRef, QueueListProps>(({
   tracks,
   currentTrack,
   isPlaying,
+  hasMore,
+  isLoadingMore,
   onPlay,
   onPuse,
+  onLoadMore,
   onToggleLike,
   onAddToPlaylist,
   onDelete,
@@ -75,12 +81,24 @@ export const QueueList = forwardRef<QueueListRef, QueueListProps>(({
     scrollToActive
   }));
 
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+      if (!onLoadMore || !hasMore || isLoadingMore) return;
+      const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+      if (scrollHeight - scrollTop - clientHeight < 100) {
+        onLoadMore();
+      }
+  };
+
   useEffect(() => {
     scrollToActive();
   }, [currentTrack?.id]);
 
   return (
-    <div ref={containerRef} style={{ height: "100%" }}>
+    <div 
+        ref={containerRef} 
+        onScroll={handleScroll}
+        style={{ height: "100%", overflowY: "auto" }}
+    >
       <List
         className={className}
         style={style}
@@ -249,6 +267,11 @@ export const QueueList = forwardRef<QueueListRef, QueueListProps>(({
         );
       }}
       />
+      {isLoadingMore && (
+        <div style={{ textAlign: "center", padding: "16px" }}>
+          <Text type="secondary">加载中...</Text>
+        </div>
+      )}
     </div>
   );
 });

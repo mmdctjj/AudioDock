@@ -30,7 +30,7 @@ import { useMessage } from "../../context/MessageContext";
 import { type Track, TrackType } from "../../models";
 import { downloadTrack } from "../../services/downloadManager";
 import { useAuthStore } from "../../store/auth";
-import { usePlayerStore } from "../../store/player";
+import { type PlaylistSource, usePlayerStore } from "../../store/player";
 import { getCoverUrl } from "../../utils";
 import { formatDuration } from "../../utils/formatDuration";
 import { usePlayMode } from "../../utils/playMode";
@@ -53,6 +53,7 @@ export interface TrackListProps {
   onRefresh?: () => void; // Called after delete/like etc if needed
   rowSelection?: any; // Ant Design Table rowSelection
   albumId?: number | string;
+  playlistSource?: PlaylistSource;
 }
 
 const TrackList: React.FC<TrackListProps> = ({
@@ -69,6 +70,7 @@ const TrackList: React.FC<TrackListProps> = ({
   onRefresh,
   rowSelection,
   albumId,
+  playlistSource,
 }) => {
   const message = useMessage();
   const { user } = useAuthStore();
@@ -94,7 +96,7 @@ const TrackList: React.FC<TrackListProps> = ({
       return;
     }
 
-    setPlaylist(tracks);
+    setPlaylist(tracks, playlistSource);
     const shouldResume =
       (type === TrackType.AUDIOBOOK || track.type === TrackType.AUDIOBOOK) &&
       track.progress &&
