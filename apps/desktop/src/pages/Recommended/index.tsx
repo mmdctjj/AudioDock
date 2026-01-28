@@ -250,7 +250,11 @@ const Recommended: React.FC = () => {
       latestArtists = artistsRes.data || [];
       latestTracks = tracksRes?.data || [];
       historyAlbums =
-        historyRes?.data?.list?.map((item: any) => item.album) || [];
+        historyRes?.data?.list?.map((item: any) => ({
+          ...item.album,
+          resumeTrackId: item.trackId,
+          resumeProgress: item.progress,
+        })) || [];
 
       const newSections: RecommendedSection[] = [
         {
@@ -336,7 +340,11 @@ const Recommended: React.FC = () => {
         cacheUtils.set(getCacheKey(CACHE_KEY_TRACKS), data);
       } else if (sectionId === "history" && user) {
         const res = await getAlbumHistory(user.id, 0, albumSize, "AUDIOBOOK");
-        const data = res.data?.list?.map((item: any) => item.album) || [];
+        const data = res.data?.list?.map((item: any) => ({
+          ...item.album,
+          resumeTrackId: item.trackId,
+          resumeProgress: item.progress,
+        })) || [];
         updateSection(sectionId, data);
         cacheUtils.set(getCacheKey(CACHE_KEY_HISTORY), data);
       }
@@ -377,7 +385,12 @@ const Recommended: React.FC = () => {
 
     if (section.type === "track") {
       const tracks = section.items as Track[];
-      setPlaylist(tracks);
+      setPlaylist(tracks, {
+        type: "tracks",
+        pageSize: 50,
+        currentPage: 0,
+        hasMore: true,
+      });
       play(tracks[0]);
     }
   };
@@ -460,6 +473,13 @@ const Recommended: React.FC = () => {
                           transition: "all 0.2s",
                         }}
                         onClick={() => {
+                          const sectionTracks = section.items as Track[];
+                          setPlaylist(sectionTracks, {
+                            type: "tracks",
+                            pageSize: 50,
+                            currentPage: 0,
+                            hasMore: true,
+                          });
                           play(item);
                         }}
                         onMouseEnter={(e) => {

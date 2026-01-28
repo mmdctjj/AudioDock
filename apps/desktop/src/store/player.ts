@@ -3,6 +3,7 @@ import {
   addToHistory,
   getAlbumTracks,
   getLatestTracks,
+  getTrackHistory,
   loadMoreTrack,
   reportAudiobookProgress,
   toggleTrackLike,
@@ -14,7 +15,7 @@ import { getPlayMode } from "../utils/playMode";
 import { useAuthStore } from "./auth";
 
 export interface PlaylistSource {
-  type: "album" | "tracks" | "other";
+  type: "album" | "tracks" | "history" | "favorites" | "other";
   id?: number | string;
   pageSize: number;
   currentPage: number;
@@ -547,6 +548,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           });
           if (res.code === 200 && res.data) {
             newTracks = res.data.list;
+          }
+        } else if (playlistSource.type === "history") {
+          const res = await getTrackHistory(
+            useAuthStore.getState().user?.id || 0,
+            skip,
+            pageSize,
+            activeMode
+          );
+          if (res.code === 200 && res.data) {
+            newTracks = res.data.list || [];
           }
         }
 

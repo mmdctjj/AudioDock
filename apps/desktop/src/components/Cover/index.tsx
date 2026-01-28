@@ -82,7 +82,7 @@ const Cover: CoverComponent = ({
       setPlaylist([item as Track]);
     } else {
       // If provided with resume data AND it is from history section, play directly instead of navigating
-      if (isHistory && (item as any).resumeTrackId) {
+      if (isHistory) {
         handlePlayAlbum();
       } else {
         // For regular albums, navigate to detail page
@@ -97,10 +97,20 @@ const Cover: CoverComponent = ({
       setPlaylist([item as Track]);
     } else {
       try {
-        const res = await getAlbumTracks((item as Album).id, 100, 0);
+        const pageSize = 50;
+        const res = await getAlbumTracks((item as Album).id, pageSize, 0);
         if (res.code === 200 && res.data.list.length > 0) {
           const tracks = res.data.list;
-          setPlaylist(tracks);
+          const totalHasMore = tracks.length === pageSize;
+
+          // Pass source info for lazy loading
+          setPlaylist(tracks, {
+            type: "album",
+            id: item.id,
+            pageSize: pageSize,
+            currentPage: 0,
+            hasMore: totalHasMore,
+          });
 
           // Check for resume info
           const resumeTrackId = (item as any).resumeTrackId;
@@ -110,7 +120,7 @@ const Cover: CoverComponent = ({
           let startTime = 0;
 
           if (resumeTrackId) {
-            const found = tracks.find((t) => t.id === resumeTrackId);
+            const found = tracks.find((t) => String(t.id) === String(resumeTrackId));
             if (found) {
               targetTrack = found;
               startTime = resumeProgress || 0;

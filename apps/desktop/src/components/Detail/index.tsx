@@ -17,7 +17,7 @@ import {
 import { useRequest } from "ahooks";
 import { Avatar, Button, Col, Flex, Input, Row, Space, theme, Typography } from "antd";
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { useMessage } from "../../context/MessageContext";
 import { type Album, type Track } from "../../models";
 import { downloadTracks } from "../../services/downloadManager";
@@ -47,6 +47,9 @@ const Detail: React.FC = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
+  const location = useLocation();
+  const hasResumed = React.useRef(false);
+
   const { token } = theme.useToken();
   const { play, setPlaylist, currentAlbumId, playlist, appendTracks } = usePlayerStore();
 
@@ -75,6 +78,7 @@ const Detail: React.FC = () => {
 
   useEffect(() => {
     if (id) {
+      hasResumed.current = false;
       fetchAlbumDetails(id);
       
       // If this is the current playing album, initialize from player store
@@ -171,19 +175,42 @@ const Detail: React.FC = () => {
     }
   };
 
-  const handlePlayAll = () => {
+  const handlePlayAll = (resumeTrackId?: string | number, resumeProgress?: number) => {
     if (tracks.length > 0 && album) {
       setPlaylist(tracks, {
         type: 'album',
         id: album.id,
         pageSize: pageSize,
-        currentPage: page - 1,
+        currentPage: Math.max(0, page - 1),
         hasMore: hasMore,
         params: { sort, keyword }
       });
-      play(tracks[0], album.id);
+
+      let targetTrack = tracks[0];
+      let startTime = 0;
+
+      if (resumeTrackId) {
+        const found = tracks.find((t) => String(t.id) === String(resumeTrackId));
+        if (found) {
+          targetTrack = found;
+          startTime = resumeProgress || 0;
+        }
+      }
+
+      play(targetTrack, album.id, startTime);
     }
   };
+
+  // Auto-resume from navigation state
+  useEffect(() => {
+    if (tracks.length > 0 && !hasResumed.current) {
+      const state = location.state as any;
+      if (state?.resumeTrackId) {
+        handlePlayAll(state.resumeTrackId, state.resumeProgress);
+        hasResumed.current = true;
+      }
+    }
+  }, [tracks, location.state]);
 
   const handleDownloadSelected = () => {
     const selectedTracks = tracks.filter((t) => selectedRowKeys.includes(t.id));
@@ -255,7 +282,7 @@ const Detail: React.FC = () => {
                   }}
                 >
                   <CaretRightOutlined
-                    onClick={handlePlayAll}
+                    onClick={() => handlePlayAll()}
                     style={{
                       color: token.colorTextSecondary,
                       fontSize: "30px",
