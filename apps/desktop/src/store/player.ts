@@ -1,13 +1,13 @@
 import {
-  addAlbumToHistory,
-  addToHistory,
-  getAlbumTracks,
-  getLatestTracks,
-  getTrackHistory,
-  loadMoreTrack,
-  reportAudiobookProgress,
-  toggleTrackLike,
-  toggleTrackUnLike
+    addAlbumToHistory,
+    addToHistory,
+    getAlbumTracks,
+    getLatestTracks,
+    getTrackHistory,
+    loadMoreTrack,
+    reportAudiobookProgress,
+    toggleTrackLike,
+    toggleTrackUnLike
 } from "@soundx/services";
 import { create } from "zustand";
 import { TrackType, type Track } from "../models";
@@ -78,6 +78,7 @@ interface PlayerState {
   removeTrack: (trackId: number | string) => void;
   startRadioMode: () => Promise<void>;
   loadMoreSourceTracks: () => Promise<void>;
+  insertTracksNext: (tracks: Track[]) => void;
 
   // Internal/System Actions
   syncActiveMode: (mode: TrackType) => void;
@@ -582,6 +583,28 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       } finally {
         set({ isLoadingMore: false });
       }
+    },
+    
+    insertTracksNext: (tracksToInsert) => {
+      const { playlist, currentTrack } = get();
+      if (!playlist.length || !currentTrack) {
+        set({
+          playlist: tracksToInsert,
+          currentTrack: tracksToInsert[0],
+          isPlaying: true,
+          playlistSource: null
+        });
+      } else {
+        const currentIndex = playlist.findIndex(t => t.id === currentTrack.id);
+        const nextIndex = currentIndex === -1 ? playlist.length : currentIndex + 1;
+        
+        // Deduplicate? Maybe optional, but good for UX. Assuming allowed for now.
+        const newPlaylist = [...playlist];
+        newPlaylist.splice(nextIndex, 0, ...tracksToInsert);
+        
+        set({ playlist: newPlaylist });
+      }
+      get()._saveCurrentStateToMode();
     },
   };
 });
