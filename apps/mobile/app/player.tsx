@@ -12,16 +12,16 @@ import { toggleTrackLike, toggleTrackUnLike } from "@soundx/services";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Animated,
-    Dimensions,
-    FlatList,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PlayerMoreModal } from "../src/components/PlayerMoreModal";
@@ -837,23 +837,28 @@ export default function PlayerScreen() {
             {showLyrics ? (
               <View style={styles.lyricsContainer}>
                 {currentTrack.lyrics ? (
-                  <TouchableOpacity
-                    style={styles.noLyricsContainer}
-                    onPress={() => setShowLyrics(false)}
+                  <ScrollView
+                    ref={scrollViewRef}
+                    style={styles.lyricsScroll}
+                    contentContainerStyle={[
+                      styles.lyricsScrollContent,
+                      {
+                        minHeight: "100%",
+                      },
+                    ]}
+                    onLayout={(e) =>
+                      setLyricContainerHeight(e.nativeEvent.layout.height)
+                    }
                   >
-                    <ScrollView
-                      ref={scrollViewRef}
-                      style={styles.lyricsScroll}
-                      contentContainerStyle={[
-                        styles.lyricsScrollContent,
-                        {
-                          paddingTop: lyricContainerHeight / 2,
-                          paddingBottom: lyricContainerHeight / 2,
-                        },
-                      ]}
-                      onLayout={(e) =>
-                        setLyricContainerHeight(e.nativeEvent.layout.height)
-                      }
+                    <TouchableOpacity
+                      activeOpacity={1}
+                      onPress={() => setShowLyrics(false)}
+                      style={{ 
+                        width: "100%", 
+                        alignItems: "center",
+                        paddingTop: lyricContainerHeight / 2,
+                        paddingBottom: lyricContainerHeight / 2,
+                      }}
                     >
                       {(() => {
                         const lyrics = parseLyrics(currentTrack.lyrics || "");
@@ -878,8 +883,8 @@ export default function PlayerScreen() {
                           );
                         });
                       })()}
-                    </ScrollView>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                  </ScrollView>
                 ) : (
                   <TouchableOpacity
                     style={styles.noLyricsContainer}
@@ -985,6 +990,7 @@ const styles = StyleSheet.create({
   noLyricsContainer: {
     flex: 1,
     justifyContent: "center",
+    width: "100%",
     alignItems: "center",
   },
   lyricsScroll: {
@@ -993,6 +999,7 @@ const styles = StyleSheet.create({
   },
   lyricsScrollContent: {
     alignItems: "center",
+    width: "100%",
   },
   lyricsLine: {
     textAlign: "center",
