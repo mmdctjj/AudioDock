@@ -57,9 +57,35 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm --filter sound-x run ${{ matrix.command }} -- --publish never
 
-      - name: Upload Release Assets
+      - name: Build Changelog
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        if: matrix.platform == 'mac' && startsWith(github.ref, 'refs/tags/')
+        with:
+          configurationJson: |
+            {
+              "template": "#{{CHANGELOG}}",
+              "categories": [
+                {
+                    "title": "## 🚀 Features",
+                    "labels": ["feat", "feature"]
+                },
+                {
+                    "title": "## 🐛 Fixes",
+                    "labels": ["fix", "bug"]
+                },
+                {
+                    "title": "## 🧪 Other Changes",
+                    "labels": []
+                }
+              ]
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Assets (Mac)
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+        if: matrix.platform == 'mac' && startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             apps/desktop/release/*.dmg
@@ -69,7 +95,23 @@ jobs:
             apps/desktop/release/*.deb
             apps/desktop/release/*.blockmap
             apps/desktop/release/latest*.yml
-          generate_release_notes: ${{ matrix.platform == 'mac' }}
+          body: ${{ steps.build_changelog.outputs.changelog }}
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Assets (Win/Linux)
+        uses: softprops/action-gh-release@v2
+        if: matrix.platform != 'mac' && startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/*.blockmap
+            apps/desktop/release/latest*.yml
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
