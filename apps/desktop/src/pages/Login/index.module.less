@@ -1,0 +1,51 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  justify-content: center;
+  align-items: center;
+}
+
+.backButton {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+}
+
+.content {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px;
+  text-align: center;
+}
+
+.header {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 10px;
+}
+
+.form {
+  text-align: left;
+  :global(.ant-form-item-label) {
+    margin-bottom: 0px;
+    padding-bottom: 0px;
+    :global(label) {
+      height: 30px !important;
+    }
+  }
+}
+
+.footerLink {
+  margin-top: 16px;
+  text-align: center;
+}
