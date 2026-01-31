@@ -16,7 +16,7 @@ import { SettingsProvider, useSettings } from "../src/context/SettingsContext";
 import { SyncProvider } from "../src/context/SyncContext";
 
 function RootLayoutNav() {
-  const { token, isLoading } = useAuth();
+  const { token, isLoading, sourceType } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const url = Linking.useURL();
@@ -28,24 +28,30 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === "(tabs)";
 
     // 排除 artist / album / modal / notification.click 页面
+    const segmentName = segments[0] as string;
     const isDetailPage =
-      segments[0] === "artist" ||
-      segments[0] === "album" ||
-      segments[0] === "modal" ||
-      segments[0] === "player" ||
-      segments[0] === "search" ||
-      segments[0] === "settings" ||
-      segments[0] === "playlist" ||
-      segments[0] === "folder" ||
-      segments[0] === "admin" ||
-      segments[0] === "notification.click";
+      segmentName === "artist" ||
+      segmentName === "album" ||
+      segmentName === "modal" ||
+      segmentName === "player" ||
+      segmentName === "search" ||
+      segmentName === "settings" ||
+      segmentName === "playlist" ||
+      segmentName === "folder" ||
+      segmentName === "admin" ||
+      segmentName === "notification.click" ||
+      segmentName === "source-manage" ||
+      segmentName === "login-form";
 
     if (!token && inAuthGroup) {
-      router.replace("/login");
+      router.replace({
+        pathname: "/login-form",
+        params: { type: sourceType || "AudioDock" },
+      } as any);
     } else if (token && !inAuthGroup && !isDetailPage) {
       router.replace("/(tabs)");
     }
-  }, [token, segments, isLoading]);
+  }, [token, segments, isLoading, sourceType]);
 
   return (
     <>
@@ -94,6 +100,14 @@ function RootLayoutNav() {
         <Stack.Screen name="folder/index" options={{ headerShown: false }} />
         <Stack.Screen name="folder/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="notification.click" options={{ headerShown: false }} />
+        <Stack.Screen name="source-manage" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="login-form" 
+          options={{ 
+            headerShown: false, 
+            animation: 'slide_from_left' 
+          }} 
+        />
       </Stack>
       {(segments[0] as string) !== "player" && <PlaylistModal />}
     </>

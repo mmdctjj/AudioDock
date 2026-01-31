@@ -45,6 +45,7 @@
     "expo-linking": "~8.0.10",
     "expo-media-library": "^18.2.1",
     "expo-modules-core": "~3.0.29",
+    "expo-network": "~8.0.8",
     "expo-router": "~6.0.17",
     "expo-screen-orientation": "^9.0.8",
     "expo-splash-screen": "~31.0.12",

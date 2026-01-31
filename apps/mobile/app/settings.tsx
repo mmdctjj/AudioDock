@@ -215,7 +215,10 @@ export default function SettingsScreen() {
             style={styles.logoutButton}
             onPress={() => {
               logout();
-              router.replace("/login");
+              router.replace({
+                pathname: "/login-form",
+                params: { type: sourceType },
+              } as any);
             }}
           >
             <Text style={styles.logoutText}>退出登录</Text>

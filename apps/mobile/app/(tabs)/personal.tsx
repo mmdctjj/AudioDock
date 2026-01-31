@@ -1,45 +1,41 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import {
-  createImportTask,
-  createPlaylist,
-  getAlbumHistory,
-  getFavoriteAlbums,
-  getFavoriteTracks,
-  getImportTask,
-  getPlaylists,
-  getRunningImportTask,
-  getTrackHistory,
-  SOURCEMAP,
-  SOURCETIPSMAP,
-  TaskStatus,
-  type ImportTask,
+    createImportTask,
+    createPlaylist,
+    getAlbumHistory,
+    getFavoriteAlbums,
+    getFavoriteTracks,
+    getImportTask,
+    getPlaylists,
+    getRunningImportTask,
+    getTrackHistory,
+    TaskStatus,
+    type ImportTask
 } from "@soundx/services";
 import { Asset } from 'expo-asset';
 import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  Modal,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    Modal,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../src/context/AuthContext";
 import { usePlayer } from "../../src/context/PlayerContext";
 import { useTheme } from "../../src/context/ThemeContext";
-import { getBaseURL } from "../../src/https";
 import { Playlist, Track } from "../../src/models";
 import {
-  getDownloadedTracks,
-  removeDownloadedTrack,
+    getDownloadedTracks,
+    removeDownloadedTrack,
 } from "../../src/services/cache";
 import { getImageUrl } from "../../src/utils/image";
 import { usePlayMode } from "../../src/utils/playMode";
@@ -116,74 +112,7 @@ export default function PersonalScreen() {
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>("track");
   const [loading, setLoading] = useState(false);
 
-  const [serverModalVisible, setServerModalVisible] = useState(false);
-  const [modalSourceType, setModalSourceType] = useState(sourceType);
-  const [serverHistory, setServerHistory] = useState<
-    { label: string; value: string }[]
-  >([]);
 
-  const handleDeleteServer = async (address: string) => {
-    Alert.alert("删除数据源", `确定要删除数据源 ${address} 吗？`, [
-      { text: "取消", style: "cancel" },
-      {
-        text: "删除",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const historyKey = `serverHistory_${sourceType}`;
-            const history = await AsyncStorage.getItem(historyKey);
-            if (history) {
-              const parsed = JSON.parse(history);
-              const filtered = parsed.filter((item: any) => item.value !== address);
-              await AsyncStorage.setItem(historyKey, JSON.stringify(filtered));
-              setServerHistory(filtered);
-
-              // Also clear associated data
-              await AsyncStorage.removeItem(`token_${address}`);
-              await AsyncStorage.removeItem(`user_${address}`);
-              await AsyncStorage.removeItem(`device_${address}`);
-              await AsyncStorage.removeItem(`creds_${sourceType}_${address}`);
-
-              if (getBaseURL() === address) {
-                // If it was current, reset to default or first available
-                const nextUrl = filtered.length > 0 ? filtered[0].value : (sourceType === 'AudioDock' ? "http://localhost:3000" : "");
-                await switchServer(nextUrl, sourceType);
-              }
-            }
-          } catch (e) {
-            console.error("Failed to delete server", e);
-          }
-        },
-      },
-    ]);
-  };
-
-  const loadServerHistory = useCallback(async (type: string) => {
-    const historyKey = `serverHistory_${type}`;
-    const history = await AsyncStorage.getItem(historyKey);
-    if (history) {
-      setServerHistory(JSON.parse(history));
-    } else {
-      setServerHistory(
-        type === "AudioDock"
-          ? [{ label: "http://localhost:3000", value: "http://localhost:3000" }]
-          : [],
-      );
-    }
-  }, []);
-
-  useEffect(() => {
-    if (serverModalVisible) {
-      setModalSourceType(sourceType);
-      loadServerHistory(sourceType);
-    }
-  }, [serverModalVisible, sourceType, loadServerHistory]);
-
-  useEffect(() => {
-    if (serverModalVisible) {
-      loadServerHistory(modalSourceType);
-    }
-  }, [modalSourceType, serverModalVisible, loadServerHistory]);
 
   useEffect(() => {
     checkUpdate();
@@ -609,7 +538,7 @@ export default function PersonalScreen() {
             <Ionicons name="heart-outline" size={22} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => setServerModalVisible(true)}
+            onPress={() => router.push("/source-manage" as any)}
             style={[styles.iconBtn, { marginRight: 10 }]}
           >
             <Ionicons name="server-outline" size={22} color={colors.text} />
@@ -997,156 +926,7 @@ export default function PersonalScreen() {
         </View>
       </Modal>
 
-      {/* Server Selection Modal */}
-      <Modal
-        visible={serverModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setServerModalVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.importModalOverlay}
-          activeOpacity={1}
-          onPress={() => setServerModalVisible(false)}
-        >
-          <View
-            style={[
-              styles.importModalContent,
-              { backgroundColor: colors.card },
-            ]}
-          >
-            <Text
-              style={[
-                styles.importModalTitle,
-                { color: colors.text, textAlign: "center" },
-              ]}
-            >
-              切换服务端
-            </Text>
 
-            <View
-              style={{
-                flexDirection: "row",
-                backgroundColor: colors.background,
-                borderRadius: 10,
-                padding: 4,
-                marginBottom: 10,
-              }}
-            >
-              {Object.keys(SOURCEMAP).map((key) => {
-                const isActive = modalSourceType === key;
-                const isDisabled = key === "Emby";
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    onPress={() => !isDisabled && setModalSourceType(key)}
-                    disabled={isDisabled}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 8,
-                      gap: 4,
-                      alignItems: "center",
-                      backgroundColor: isActive ? colors.card : "transparent",
-                      borderRadius: 8,
-                      opacity: isDisabled ? 0.5 : 1,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      {key === "Emby" ? (
-                        <Image source={embyLogo} style={{ width: 20, height: 20 }} />
-                      ) : key === "Subsonic" ? (
-                        <Image source={subsonicLogo} style={{ width: 20, height: 20 }} />
-                      ) : (
-                        <Image source={logo} style={{ width: 20, height: 20 }} />
-                      )}
-                      <Text
-                        style={{
-                          color: isActive ? colors.primary : colors.secondary,
-                          fontWeight: isActive ? "bold" : "normal",
-                          fontSize: 14,
-                        }}
-                      >
-                        {key}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <Text
-              style={{
-                color: colors.secondary,
-                fontSize: 12,
-                marginBottom: 15,
-                textAlign: "center",
-              }}
-            >
-              {SOURCETIPSMAP[modalSourceType as keyof typeof SOURCETIPSMAP]}
-            </Text>
-
-            <FlatList
-              data={serverHistory}
-              keyExtractor={(item) => item.value}
-              renderItem={({ item }) => (
-                <View
-                  style={[
-                    styles.serverItem,
-                    { borderBottomColor: colors.border },
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={[
-                      { flex: 1, paddingVertical: 15, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center' },
-                      getBaseURL() === item.value && sourceType === modalSourceType && {
-                        backgroundColor: "rgba(150,150,150,0.1)",
-                      },
-                    ]}
-                    onPress={async () => {
-                      await switchServer(item.value, modalSourceType);
-                      setServerModalVisible(false);
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[
-                          styles.serverItemText,
-                          {
-                            color:
-                              getBaseURL() === item.value && sourceType === modalSourceType
-                                ? colors.primary
-                                : colors.text,
-                          },
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                    </View>
-                    {getBaseURL() === item.value && sourceType === modalSourceType && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color={colors.primary}
-                      />
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{ padding: 5 }}
-                    onPress={() => handleDeleteServer(item.value)}
-                  >
-                    <Ionicons
-                      name="trash-outline"
-                      size={20}
-                      color={colors.secondary}
-                    />
-                  </TouchableOpacity>
-                </View>
-              )}
-              style={{ maxHeight: 300 }}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
 
       {/* Donation Modal */}
       <Modal

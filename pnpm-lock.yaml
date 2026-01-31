@@ -305,6 +305,9 @@ importers:
       expo-modules-core:
         specifier: ~3.0.29
         version: 3.0.29(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      expo-network:
+        specifier: ~8.0.8
+        version: 8.0.8(expo@54.0.27)(react@19.1.0)
       expo-router:
         specifier: ~6.0.17
         version: 6.0.17(e29fdc08ab87b723b7f272f9b8dd9bf4)
@@ -7237,6 +7240,12 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  expo-network@8.0.8:
+    resolution: {integrity: sha512-dgrL8UHAmWofqeY4UEjWskCl/RoQAM0DG6PZR8xz2WZt+6aQEboQgFRXowCfhbKZ71d16sNuKXtwBEsp2DtdNw==}
+    peerDependencies:
+      expo: '*'
+      react: '*'
 
   expo-router@6.0.17:
     resolution: {integrity: sha512-2n0lTidH2H+dOjk/Lu+krKIgK7b1qQ3O/9RWmf9P5IEuFiu7BSUgSDc+g69bUEElTnca8FR+zPTyk15kMXHrXg==}
@@ -22499,6 +22508,11 @@ snapshots:
       invariant: 2.2.4
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+
+  expo-network@8.0.8(expo@54.0.27)(react@19.1.0):
+    dependencies:
+      expo: 54.0.27(@babel/core@7.28.5)(@expo/metro-runtime@6.1.2)(expo-router@6.0.17)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      react: 19.1.0
 
   expo-router@6.0.17(e29fdc08ab87b723b7f272f9b8dd9bf4):
     dependencies:
